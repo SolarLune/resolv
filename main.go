@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/gfx"
 	"github.com/veandco/go-sdl2/sdl"
@@ -17,6 +19,7 @@ var squareSpeedX float32
 var squareSpeedY float32
 
 var renderer *sdl.Renderer
+var avgFramerate int
 
 func main() {
 
@@ -38,12 +41,15 @@ func main() {
 	gfx.InitFramerate(fpsMan)
 	gfx.SetFramerate(fpsMan, 60)
 
-	// Change this to one of the World structs to change the world and see different tests
+	// Change this to one of the other World structs to change the world and see different tests
 	world := World1{}
 
 	world.Create()
 
 	running := true
+
+	var frameCount int
+	var framerateDelay uint32
 
 	for running {
 
@@ -74,7 +80,16 @@ func main() {
 
 		world.Draw()
 
-		gfx.FramerateDelay(fpsMan)
+		framerateDelay += gfx.FramerateDelay(fpsMan)
+
+		if framerateDelay >= 1000 {
+			avgFramerate = frameCount
+			framerateDelay -= 1000
+			frameCount = 0
+			fmt.Println(avgFramerate, " FPS")
+		}
+
+		frameCount++
 
 		renderer.Present()
 

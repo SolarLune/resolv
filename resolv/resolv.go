@@ -214,14 +214,10 @@ func resolve(firstShape Shape, other Shape, speed float32, xAxis bool) Collision
 		return out
 	}
 
-	//	The resolution direction is opposite to the direction of the "speed"
 	d := -1
 	if speed > 0 {
 		d = 1
 	}
-
-	//	Move the rectangle by the speed value supplied initially to put it in the new position, and then work backward
-	//	from there if it's colliding.
 
 	for i := 0; i < int(math.Ceil(math.Abs(float64(speed))))+1; i++ {
 
