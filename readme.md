@@ -25,7 +25,7 @@ It should be as simple as just go getting it and importing it in your game appli
 
 ## How do you use it?
 
-There's two ways to use resolv. One way is to simply create two Shapes, and then attempt to resolve a movement of one into the other, like below. (Note that this is untested pseudo-code, but the idea is fine.)
+There's two ways to use resolv. One way is to simply create two Shapes, and then check for a collision between them, or attempt to resolve a movement of one into the other, like below:
 
 ```go
 
@@ -130,12 +130,14 @@ func Init() {
 
 func Update() {
 
-    // This time, we want to see if we're going to collide with something moving down-right by 2 pixels, each axis.
+    // This time, we want to see if we're going to collide with something moving down-right by 2 pixels on each axis.
     dx := 2
     dy := 2
 
     // Now we check each axis individually. This is done to allow a collision on one axis to not stop movement on the other
     // as necessary. The "solid" tag goes here, so we only resolve a collision against Shapes that have that tag.
+
+    // Space.Resolve() returns the first collision that the target shape comes into contact with.
     collision := space.Resolve(playerRect, dx, true, "solid")
 
     if collision.Colliding() {
