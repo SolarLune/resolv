@@ -1,6 +1,8 @@
 
 # resolv
 
+![peek 2018-09-15 02-26](https://user-images.githubusercontent.com/4733521/45585063-0c3fa100-b893-11e8-93df-7a14be9992ae.gif)
+
 ## What is resolv?
 
 resolv is a library specifically created for simple arcade (non-realistic) collision detection and resolution for video games. resolv is created in the Go language, but the core concepts are very straightforward and could be easily adapted for use with other languages or game engines and frameworks.
@@ -160,7 +162,7 @@ Welp, that's about it. If you want to see more info, feel free to examine the ma
 
 ## Dependencies?
 
-For the actual package, there are no external dependencies. resolv just uses the built-in "fmt" and "math" packages. 
+For the actual package, there are no external dependencies. resolv just uses the built-in "fmt" and "math" packages. It also exists in just one Go file (currently, anyway), which is also a good thing, I suppose, haha.
 
 For the tests, resolv requires veandco's sdl2 port to create the window, handle input, and draw the shapes.
 
