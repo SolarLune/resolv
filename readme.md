@@ -1,7 +1,9 @@
 
 # resolv
 
-![peek 2018-09-15 02-26](https://user-images.githubusercontent.com/4733521/45585063-0c3fa100-b893-11e8-93df-7a14be9992ae.gif)
+![resolv_2](https://user-images.githubusercontent.com/4733521/45698619-48863200-bb1d-11e8-8fab-f1f359fea8b3.gif)
+
+![resolv_1](https://user-images.githubusercontent.com/4733521/45585063-0c3fa100-b893-11e8-93df-7a14be9992ae.gif)
 
 ## What is resolv?
 
