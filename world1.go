@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/SolarLune/resolv/resolv"
@@ -9,7 +10,35 @@ import (
 
 type World1 struct{}
 
+type Bouncer struct {
+	Rect   *resolv.Rectangle
+	SpeedX float32
+	SpeedY float32
+}
+
+var squares []*Bouncer
+
+func MakeNewBouncer() *Bouncer {
+
+	var cell int32 = 16
+
+	bouncer := &Bouncer{Rect: resolv.NewRectangle(cell*2+rand.Int31n(screenWidth-cell*4), cell*2+rand.Int31n(screenHeight-cell*4), cell, cell),
+		SpeedX: (0.5 - rand.Float32()) * 8,
+		SpeedY: (0.5 - rand.Float32()) * 8}
+
+	bouncer.Rect.SetTags("bouncer", "solid")
+
+	squares = append(squares, bouncer)
+
+	space.AddShape(bouncer.Rect)
+
+	return bouncer
+
+}
+
 func (w World1) Create() {
+
+	squares = make([]*Bouncer, 0)
 
 	var cell int32 = 16
 	var screenCellWidth = screenWidth / cell
@@ -17,8 +46,6 @@ func (w World1) Create() {
 
 	// Just so nobody gets confused, yes, this isn't "true" fidelity because while I'm using floats for the speed variables,
 	// I'm putting them into ints in the rectangle rather than having extra X and Y variables (just to make it easier to follow).
-	squareSpeedX = (0.5 - rand.Float32()) * 8
-	squareSpeedY = (0.5 - rand.Float32()) * 8
 
 	space = resolv.NewSpace()
 	space.AddShape(resolv.NewRectangle(0, 0, screenWidth, cell))
@@ -33,30 +60,40 @@ func (w World1) Create() {
 	}
 
 	for _, shape := range space {
-		shape.SetTag("solid")
+		shape.SetTags("solid")
 	}
 
-	mainSquare = resolv.NewRectangle(40, 64, cell, cell)
-	space.AddShape(mainSquare)
+	MakeNewBouncer()
 
 }
 
 func (w World1) Update() {
 
-	squareSpeedY += 0.25
+	for _, bouncer := range squares {
 
-	if res := space.Resolve(mainSquare, squareSpeedX, true, "solid"); res.Colliding() {
-		mainSquare.X += res.ResolveDistance
-		squareSpeedX *= -1
-	} else {
-		mainSquare.X += int32(squareSpeedX)
+		bouncer.SpeedY += 0.25
+
+		// The additional teleporting check means that it won't resolve in a way that would cause it to move inordinately far (i.e.
+		// teleporting.). See the docs in resolv.go to see exactly what Teleporting is defined as.
+		if res := space.Resolve(bouncer.Rect, bouncer.SpeedX, 0); res.Colliding() && !res.Teleporting {
+			bouncer.Rect.X += res.ResolveX
+			bouncer.SpeedX *= -1
+		} else {
+			bouncer.Rect.X += int32(bouncer.SpeedX)
+		}
+
+		if res := space.Resolve(bouncer.Rect, 0, bouncer.SpeedY); res.Colliding() && !res.Teleporting {
+			bouncer.Rect.Y += res.ResolveY
+			bouncer.SpeedY *= -1
+		} else {
+			bouncer.Rect.Y += int32(bouncer.SpeedY)
+		}
+
 	}
 
-	if res := space.Resolve(mainSquare, squareSpeedY, false, "solid"); res.Colliding() {
-		mainSquare.Y += res.ResolveDistance
-		squareSpeedY *= -1
-	} else {
-		mainSquare.Y += int32(squareSpeedY)
+	if keyboard.KeyDown(sdl.K_UP) {
+		MakeNewBouncer()
+		fmt.Println(len(squares), " bouncers in the world now.")
 	}
 
 }
@@ -69,7 +106,7 @@ func (w World1) Draw() {
 
 		renderer.SetDrawColor(255, 255, 255, 255)
 
-		if rect == mainSquare {
+		if rect.HasTags("bouncer") {
 			renderer.SetDrawColor(60, 180, 255, 255)
 		}
 

@@ -56,14 +56,14 @@ func Update() {
     // Here, we check to see if there's a collision should shape1 try to move to the right by 10 pixels. The Resolve()
     // functions return a Collision object that has information about whether the attempted movement would work,
     // and whether it resulted in a collision or not.
-    collision := shape1.Resolve(shape2, dx, true)
+    collision := shape1.Resolve(shape2, dx, 0)
 
     if collision.Colliding() {
         
         // If there was a collision, then shape1 couldn't move fully to the right. It came into contact with shape2,
         // and the variable collision now holds a Collision object with helpful information, like how far it was able to move.
         // Move the shape over to the right by the distance that it can to come into full contact with shape2.
-        shape1.X += collision.ResolveDistance
+        shape1.X += collision.ResolveX
 
     } else {
 
@@ -97,16 +97,17 @@ func Init() {
     // Create one rectangle - we'll say this one represents our player.
     playerRect = resolv.NewRectangle(40, 40, 16, 16)
 
-    // Add the shape to the space
+    // Note that we don't have to add the Player Rectangle to the space; this is only if we want it to also be seen if 
+    // a Shape uses the Space for collision detection or resolution.
     space.AddShape(playerRect)
 
     // Create some more Rectangles to represent level bounds.
     s := resolv.NewRectangle(0, 0, 16, 240)
 
     // We set tags on the Rectangles to allow us to more easily check for collisions by specific "type".
-    s.SetTag("solid")
+    s.SetTags("solid")
     
-    // Then we add the shape to the space.
+    // Then we add the Shape to the Space.
     space.AddShape(s)
 
     // Note that this is a bit verbose - in reality, you'd probably be loading the necessary data to construct the Shapes
@@ -115,41 +116,51 @@ func Init() {
     // like this. Anyway...
 
     s = resolv.NewRectangle(16, 0, 320, 16)
-    s.SetTag("solid")
+    s.SetTags("solid")
     space.AddShape(s)
 
     s = resolv.NewRectangle(16, 240-16, 320, 16)
-    s.SetTag("solid")
+    s.SetTags("solid")
     space.AddShape(s)
     
     s = resolv.NewRectangle(320-16, 16, 16, 240-16)
-    s.SetTag("solid")
+    s.SetTags("solid")
     space.AddShape(s)
 
 }
 
 func Update() {
 
-    // This time, we want to see if we're going to collide with something moving down-right by 2 pixels on each axis.
-    dx := 2
-    dy := 2
+    // This time, we want to see if we're going to collide with something solid when moving down-right by 4 pixels on each axis.
+
+    dx := 4
+    dy := 4
+
+    // To check for Shapes with a specific tag, we can filter out the Space they exist in with either the Space.FilterByTags() 
+    // or Space.Filter functions. Space.Filter() allows us to provide a function to filter out the Shapes; Space.FilterByTags() 
+    // takes the tag names themselves to filter out the Shapes by. 
+
+    // This gives us just the Shapes with the "solid" tag.
+    solids := space.FilterByTags("solid")
+
+    // You can provide more tags in the same function, as well. (i.e. others := space.FilterByTags("solid", "danger", "zone"))
 
     // Now we check each axis individually. This is done to allow a collision on one axis to not stop movement on the other
-    // as necessary. The "solid" tag goes here, so we only resolve a collision against Shapes that have that tag.
+    // as necessary. Note that Space.Resolve() takes the checking Shape as the first argument, and returns the first collision 
+    // that it comes into contact with.
 
-    // Space.Resolve() returns the first collision that the target shape comes into contact with.
-    collision := space.Resolve(playerRect, dx, true, "solid")
+    collision := solids.Resolve(playerRect, dx, 0)
 
     if collision.Colliding() {
-        playerRect.X += collision.ResolveDistance
+        playerRect.X += collision.ResolveX
     } else {
         playerRect.X += dx
     }
 
-    collision = space.Resolve(playerRect, dy, false, "solid")
+    collision = solids.Resolve(playerRect, 0, dy)
 
     if collision.Colliding() {
-        playerRect.Y += collision.ResolveDistance
+        playerRect.Y += collision.ResolveY
     } else {
         playerRect.Y += dy
     }
@@ -170,8 +181,10 @@ For the tests, resolv requires veandco's sdl2 port to create the window, handle 
 
 ## Shout-out Time!
 
-Props to whoever made arcadepi.ttf!
+Props to whoever made arcadepi.ttf! It's a nice font.
 
 Thanks a lot to the SDL2 team for development.
 
 Thanks to veandco for maintaining the Golang SDL2 port, as well!
+
+Thanks to the people who stop by on my stream - they helped out a lot with a couple of the technical aspects of getting Go to do what I needed to, haha.

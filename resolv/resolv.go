@@ -51,32 +51,33 @@ func (sp *Space) Clear() {
 	*sp = make(Space, 0)
 }
 
-// IsColliding returns true if the designated Shape collides with another Shape in the Space with the specified tag.
-func (sp *Space) IsColliding(shape Shape, tag string) bool {
+// Colliding takes a checking Shape, and checks to see if any of the Shapes in the Space are colliding with it. If so, it adds it
+// to a new Space, and returns it.
+func (sp *Space) Colliding(shape Shape) Space {
+
+	newSpace := Space{}
 
 	for _, other := range *sp {
-		if other != shape && (tag == "" || other.GetTag() == tag) {
+		if other != shape {
 			if shape.IsColliding(other) {
-				return true
+				newSpace = append(newSpace, other)
 			}
 		}
 	}
-	return false
+
+	return newSpace
 
 }
 
 // Resolve attempts to move the checking shape through space, returning a Collision object with its findings if it collides with
-// any other shapes in the Space. Speed is the movement displacement in pixels, and xAxis determines if the speed given should be
-// tested on the X-axis, or Y-axis. This is done because for simple arcade-like movement, it tends to be a good idea to resolve
-// collisions on the X and Y axes separately, one at a time, rather than all at once. The tag argument allows you to focus the
-// function to look at only Shapes that have the specified tag.
-// If the tag argument is a blank string, it will search all other Shapes.
-func (sp *Space) Resolve(checkingShape Shape, speed float32, xAxis bool, tag string) Collision {
+// any other shapes in the Space. xSpeed and ySpeed are the movement displacement in pixels for the frame. You should generally
+// check for collision resolutions on the X and Y axes separately.
+func (sp *Space) Resolve(checkingShape Shape, xSpeed, ySpeed float32) Collision {
 
 	for _, other := range *sp {
-		if (tag == "" || other.GetTag() == tag) && other != checkingShape {
-			res := checkingShape.Resolve(other, speed, xAxis)
-			if res.Direction != CollisionNone {
+		if other != checkingShape {
+			res := checkingShape.Resolve(other, xSpeed, ySpeed)
+			if res.Colliding() {
 				return res
 			}
 		}
@@ -86,16 +87,37 @@ func (sp *Space) Resolve(checkingShape Shape, speed float32, xAxis bool, tag str
 
 }
 
-// Filter filters out a space, returning a "sub-space" of Shapes that return true for the boolean function you pass in that takes
-// a Shape. Basically, you can use this to pick out specific Shapes from a single Space.
+// Filter filters out a Space, returning a new Space comprised of Shapes that return true for the boolean function you provide.
+// This can be used to focus on a set of object for collision testing or resolution, or lower the number of Shapes to test
+// by filtering some out beforehand.
 func (sp Space) Filter(filterFunc func(Shape) bool) Space {
 	subSpace := make(Space, 0)
 	for _, shape := range sp {
 		if filterFunc(shape) {
-			subSpace = append(subSpace, shape)
+			subSpace.AddShape(shape)
 		}
 	}
 	return subSpace
+}
+
+// FilterByTags filters a Space out, creating a new Space that has just the Shapes that have all of the specified tags.
+func (sp Space) FilterByTags(tags ...string) Space {
+	return sp.Filter(func(s Shape) bool {
+		if s.HasTags(tags...) {
+			return true
+		}
+		return false
+	})
+}
+
+// Contains returns true if the Shape provided exists within the Space.
+func (sp Space) Contains(shape Shape) bool {
+	for _, s := range sp {
+		if s == shape {
+			return true
+		}
+	}
+	return false
 }
 
 func (sp *Space) String() string {
@@ -106,149 +128,202 @@ func (sp *Space) String() string {
 	return str
 }
 
-// CollisionDirection constants are to be used when checking the Collision object returned from Resolve functions.
-type CollisionDirection int
-
-func (cd CollisionDirection) String() string {
-
-	switch cd {
-
-	case CollisionDown:
-		return "Collision Down"
-	case CollisionUp:
-		return "Collision Up"
-	case CollisionRight:
-		return "Collision Right"
-	case CollisionLeft:
-		return "Collision Left"
-	case CollisionNone:
-		return "No Collision"
-	}
-
-	return ""
-}
-
-// CollisionDirection constant definitions
-const (
-	CollisionNone CollisionDirection = iota
-	CollisionDown
-	CollisionUp
-	CollisionRight
-	CollisionLeft
-)
-
-// Collision describes the collision found when a Shape attempted to resolve a movement into another Shape, or in the same Space as
-// other existing Shapes.
-type Collision struct {
-	Direction CollisionDirection
-	// Direction is what direction a collision was encountered in, if any. One of the CollisionDirection constants.
-	ResolveDistance int32
-	// ResolveDistance is the distance to move to come into contact with the object.
-	StartedFree bool
-	// StartedFree is whether the Resolve() function was called with the calling object already in a non-colliding state.
-}
-
-// Colliding returns whether the Collision was valid; this is just checking to see if the Direction returned is not CollisionNone.
-func (c Collision) Colliding() bool {
-	return c.Direction != CollisionNone
-}
-
-// Shape is a basic interface that describes a Shape that can be passed to collision resolution functions and exist in the same Space.
+// Shape is a basic interface that describes a Shape that can be passed to collision resolution functions and exist in the same
+// Space.
 type Shape interface {
 	IsColliding(Shape) bool
 	IsCollideable() bool
 	SetCollideable(bool)
-	Resolve(Shape, float32, bool) Collision
-	GetTag() string
-	SetTag(string)
+	Resolve(Shape, float32, float32) Collision
+	GetTags() []string
+	SetTags(...string)
+	HasTags(...string) bool
 	GetData() interface{}
 	SetData(interface{})
-	Move(int32, int32)
+	SetXY(int32, int32)
+	GetXY() (int32, int32)
 }
 
 // basicShape isn't to be used; it just has some basic functions and data, common to all structs that embed it, like and position
 // and collide-ability.
 type basicShape struct {
 	X, Y        int32
-	Tag         string
+	tags        []string
 	Collideable bool
 	Data        interface{}
 }
 
-func (b basicShape) GetTag() string {
-	return b.Tag
+// GetTags returns the tags on the Shape.
+func (b basicShape) GetTags() []string {
+	return b.tags
 }
 
-func (b *basicShape) SetTag(tag string) {
-	b.Tag = tag
+// SetTags sets the tags on the Shape.
+func (b *basicShape) SetTags(tags ...string) {
+	b.tags = tags
 }
 
+// If the Shape has all of the tags provided.
+func (b basicShape) HasTags(tags ...string) bool {
+
+	hasTags := true
+
+	for _, t1 := range tags {
+		found := false
+		for _, shapeTag := range b.tags {
+			if t1 == shapeTag {
+				found = true
+				continue
+			}
+		}
+		if !found {
+			hasTags = false
+			break
+		}
+	}
+
+	return hasTags
+}
+
+// IsCollideable returns whether the Shape is currently collide-able or not.
 func (b basicShape) IsCollideable() bool {
 	return b.Collideable
 }
 
+// SetCollideable sets the Shape's collide-ability.
 func (b *basicShape) SetCollideable(on bool) {
 	b.Collideable = on
 }
 
+// GetData returns the data on the Shape.
 func (b basicShape) GetData() interface{} {
 	return b.Data
 }
 
+// SetData sets the data on the Shape.
 func (b *basicShape) SetData(data interface{}) {
 	b.Data = data
 }
 
-func (b *basicShape) Move(x, y int32) {
-	b.X += x
-	b.Y += y
+// GetXY returns the position of the Shape.
+func (b *basicShape) GetXY() (int32, int32) {
+	return b.X, b.Y
+}
+
+// SetXY sets the position of the Shape.
+func (b *basicShape) SetXY(x, y int32) {
+
+	b.X = x
+	b.Y = y
+
+}
+
+// Collision describes the collision found when a Shape attempted to resolve a movement into another Shape, or in the same Space as
+// other existing Shapes.
+type Collision struct {
+	ResolveX, ResolveY int32
+	// ResolveX and ResolveY represent the displacement of the Shape to the point of collision. How far along the Shape got when
+	// attempting to move along the direction given by xSpeed and ySpeed in the Resolve() function before touching another Shape.
+	Teleporting bool
+	// Teleporting is if moving according to ResolveX and ResolveY might be considered teleporting, which is moving greater than the
+	// X or Yspeed provided to the Resolve function * 1.5 (this is arbitrary, but can be useful).
+	OtherShape Shape
+	// OtherShape should be a pointer to the Shape that the colliding object collided with.
+}
+
+// Colliding returns whether the Collision actually was valid because of a collision against another Shape.
+func (c Collision) Colliding() bool {
+	return c.OtherShape != nil
 }
 
 // resolve is a generic function to resolve the attempt of one shape to move up against another one. Individual Shapes' Resolve()
 // functions just point to this function for ease of use.
-func resolve(firstShape Shape, other Shape, speed float32, xAxis bool) Collision {
+func resolve(firstShape Shape, other Shape, xSpeed, ySpeed float32) Collision {
 
 	out := Collision{}
+	out.ResolveX, out.ResolveY = firstShape.GetXY()
+	out.ResolveX += int32(xSpeed)
+	out.ResolveY += int32(ySpeed)
 
-	if !other.IsCollideable() {
+	if !other.IsCollideable() || (xSpeed == 0 && ySpeed == 0) {
 		return out
 	}
 
-	d := -1
-	if speed > 0 {
-		d = 1
+	xv, yv := firstShape.GetXY()
+
+	firstShape.SetXY(xv+int32(xSpeed), yv+int32(ySpeed))
+
+	x := float32(xv) + xSpeed
+	y := float32(yv) + ySpeed
+
+	primeX := true
+	var slope float32
+
+	if ySpeed != 0 && xSpeed != 0 {
+		slope = ySpeed / xSpeed
 	}
 
-	for i := 0; i < int(math.Ceil(math.Abs(float64(speed))))+1; i++ {
-
-		if xAxis {
-			firstShape.Move(int32(d), 0)
-		} else {
-			firstShape.Move(0, int32(d))
+	if math.Abs(float64(ySpeed)) > math.Abs(float64(xSpeed)) {
+		primeX = false
+		if ySpeed != 0 && xSpeed != 0 {
+			slope = xSpeed / ySpeed
 		}
+	}
 
-		out.ResolveDistance += int32(d)
+	colliding := true
+
+	for colliding {
 
 		if firstShape.IsColliding(other) {
 
-			if xAxis && d > 0 {
-				out.Direction = CollisionRight
-			} else if xAxis && d < 0 {
-				out.Direction = CollisionLeft
-			} else if !xAxis && d > 0 {
-				out.Direction = CollisionDown
+			if primeX {
+
+				if xSpeed > 0 {
+					x--
+				} else if xSpeed < 0 {
+					x++
+				}
+
+				if ySpeed > 0 {
+					y -= slope
+				} else if ySpeed < 0 {
+					y += slope
+				}
+
 			} else {
-				out.Direction = CollisionUp
+
+				if ySpeed > 0 {
+					y--
+				} else if ySpeed < 0 {
+					y++
+				}
+
+				if xSpeed > 0 {
+					x -= slope
+				} else if xSpeed < 0 {
+					x += slope
+				}
+
 			}
 
-			if math.Abs(float64(out.ResolveDistance)) >= float64(d) {
-				out.ResolveDistance -= int32(d)
-			}
+			out.ResolveX = int32(x)
+			out.ResolveY = int32(y)
 
-			break
+			firstShape.SetXY(out.ResolveX, out.ResolveY)
 
+			out.OtherShape = other
+
+		} else {
+			colliding = false
 		}
 
+	}
+
+	out.ResolveX -= xv
+	out.ResolveY -= yv
+
+	if math.Abs(float64(xSpeed-float32(out.ResolveX))) > math.Abs(float64(xSpeed*1.5)) || math.Abs(float64(ySpeed-float32(out.ResolveY))) > math.Abs(float64(ySpeed*1.5)) {
+		out.Teleporting = true
 	}
 
 	return out
@@ -310,14 +385,13 @@ func (r Rectangle) Center() (int32, int32) {
 }
 
 // Resolve attempts to move the checking shape through space, returning a Collision object with its findings if it collides with
-// the specified other Shape. Speed is the movement displacement in pixels, and xAxis determines if the speed given should be
-// tested on the X-axis, or Y-axis. This is done because for simple arcade-like movement, it tends to be a good idea to resolve
-// collisions on the X and Y axes separately, one at a time, rather than all at once.
-func (r *Rectangle) Resolve(other Shape, speed float32, xAxis bool) Collision {
+// the specified other Shape. The xSpeed and ySpeed arguments are the movement displacement in pixels (note that collision resolution
+// operates on, naturally, whole pixels still). For most situations, you would want to resolve on the X and Y axes separately.
+func (r *Rectangle) Resolve(other Shape, xSpeed, ySpeed float32) Collision {
 
 	// Because the resolve function is the same for all the shapes, essentially
 	rect := *r
-	return resolve(&rect, other, speed, xAxis)
+	return resolve(&rect, other, xSpeed, ySpeed)
 
 }
 
@@ -390,12 +464,11 @@ func (c Circle) IsColliding(other Shape) bool {
 }
 
 // Resolve attempts to move the checking shape through space, returning a Collision object with its findings if it collides with
-// the specified other Shape. Speed is the movement displacement in pixels, and xAxis determines if the speed given should be
-// tested on the X-axis, or Y-axis. This is done because for simple arcade-like movement, it tends to be a good idea to resolve
-// collisions on the X and Y axes separately, one at a time, rather than all at once.
-func (c *Circle) Resolve(other Shape, speed float32, xAxis bool) Collision {
+// the specified other Shape. The xSpeed and ySpeed arguments are the movement displacement in pixels (note that collision resolution
+// operates on, naturally, whole pixels still). For most situations, you would want to resolve on the X and Y axes separately.
+func (c *Circle) Resolve(other Shape, xSpeed, ySpeed float32) Collision {
 
 	circle := *c
-	return resolve(&circle, other, speed, xAxis)
+	return resolve(&circle, other, xSpeed, ySpeed)
 
 }

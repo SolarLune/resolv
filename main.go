@@ -13,11 +13,6 @@ var screenWidth int32 = 320
 var screenHeight int32 = 240
 
 var space resolv.Space
-
-var mainSquare *resolv.Rectangle
-var squareSpeedX float32
-var squareSpeedY float32
-
 var renderer *sdl.Renderer
 var avgFramerate int
 
@@ -63,6 +58,12 @@ func main() {
 		}
 
 		keyboard.Update()
+
+		if keyboard.KeyPressed(sdl.K_1) {
+			gfx.SetFramerate(fpsMan, 10)
+		} else if keyboard.KeyPressed(sdl.K_2) {
+			gfx.SetFramerate(fpsMan, 60)
+		}
 
 		if keyboard.KeyPressed(sdl.K_ESCAPE) {
 			running = false

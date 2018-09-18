@@ -18,6 +18,12 @@ func (w World4) Create() {
 
 	resolvers = make([]*resolv.Rectangle, 0)
 
+	var cell int32 = 16
+	space.AddShape(resolv.NewRectangle(0, 0, screenWidth, cell))
+	space.AddShape(resolv.NewRectangle(0, cell, cell, screenHeight-cell))
+	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
+	space.AddShape(resolv.NewRectangle(cell, screenHeight-cell, screenWidth-(cell*2), cell))
+
 	for x := 0; x < 400; x++ {
 		rect := resolv.NewRectangle(rand.Int31n(screenWidth), rand.Int31n(screenHeight), 16, 16)
 		resolvers = append(resolvers, rect)
@@ -32,8 +38,8 @@ func (w World4) Create() {
 func (w World4) Update() {
 
 	for _, resolver := range resolvers {
-		space.Resolve(resolver, 4, true, "")
-		space.Resolve(resolver, 4, false, "")
+		space.Resolve(resolver, 4, 0)
+		space.Resolve(resolver, 0, 4)
 	}
 
 }

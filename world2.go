@@ -19,15 +19,15 @@ func (w World2) Create() {
 	space.AddShape(resolv.NewRectangle(cell, screenHeight-cell, screenWidth-(cell*2), cell))
 
 	for _, shape := range space {
-		shape.SetTag("solid")
+		shape.SetTags("solid")
 	}
 
 	zone := resolv.NewRectangle(screenWidth/2, cell*2, screenWidth/2-(cell*2), screenHeight/2)
-	zone.SetTag("zone")
+	zone.SetTags("zone")
 	space.AddShape(zone)
 
-	mainSquare = resolv.NewRectangle(screenWidth/2, screenHeight/2, cell, cell)
-	space.AddShape(mainSquare)
+	bouncer := MakeNewBouncer()
+	squares = append(squares, bouncer)
 
 }
 
@@ -37,65 +37,73 @@ func (w World2) Update() {
 	accel := 0.5 + friction
 	var maxSpd float32 = 3
 
-	if squareSpeedX >= friction {
-		squareSpeedX -= friction
-	} else if squareSpeedX <= -friction {
-		squareSpeedX += friction
+	// Note that I'm being lazy and using the squares list / Bouncer struct from World1.go to store player data,
+	// rather than making a new set of data here for World2.
+	player := squares[0]
+
+	if player.SpeedX >= friction {
+		player.SpeedX -= friction
+	} else if player.SpeedX <= -friction {
+		player.SpeedX += friction
 	} else {
-		squareSpeedX = 0
+		player.SpeedX = 0
 	}
 
-	if squareSpeedY >= friction {
-		squareSpeedY -= friction
-	} else if squareSpeedY <= -friction {
-		squareSpeedY += friction
+	if player.SpeedY >= friction {
+		player.SpeedY -= friction
+	} else if player.SpeedY <= -friction {
+		player.SpeedY += friction
 	} else {
-		squareSpeedY = 0
+		player.SpeedY = 0
 	}
 
 	if keyboard.KeyDown(sdl.K_RIGHT) {
-		squareSpeedX += accel
+		player.SpeedX += accel
 	}
 	if keyboard.KeyDown(sdl.K_LEFT) {
-		squareSpeedX -= accel
+		player.SpeedX -= accel
 	}
 
 	if keyboard.KeyDown(sdl.K_UP) {
-		squareSpeedY -= accel
+		player.SpeedY -= accel
 	}
 	if keyboard.KeyDown(sdl.K_DOWN) {
-		squareSpeedY += accel
+		player.SpeedY += accel
 	}
 
-	if squareSpeedX > maxSpd {
-		squareSpeedX = maxSpd
-	} else if squareSpeedX < -maxSpd {
-		squareSpeedX = -maxSpd
+	if player.SpeedX > maxSpd {
+		player.SpeedX = maxSpd
+	} else if player.SpeedX < -maxSpd {
+		player.SpeedX = -maxSpd
 	}
 
-	if squareSpeedY > maxSpd {
-		squareSpeedY = maxSpd
-	} else if squareSpeedY < -maxSpd {
-		squareSpeedY = -maxSpd
+	if player.SpeedY > maxSpd {
+		player.SpeedY = maxSpd
+	} else if player.SpeedY < -maxSpd {
+		player.SpeedY = -maxSpd
 	}
 
-	if res := space.Resolve(mainSquare, squareSpeedX, true, "solid"); res.Colliding() {
-		mainSquare.X += res.ResolveDistance
-		squareSpeedX = 0
+	solids := space.FilterByTags("solid")
+
+	if res := solids.Resolve(player.Rect, player.SpeedX, 0); res.Colliding() {
+		player.Rect.X += res.ResolveX
+		player.SpeedX = 0
 	} else {
-		mainSquare.X += int32(squareSpeedX)
+		player.Rect.X += int32(player.SpeedX)
 	}
 
-	if res := space.Resolve(mainSquare, squareSpeedY, false, "solid"); res.Colliding() {
-		mainSquare.Y += res.ResolveDistance
-		squareSpeedY = 0
+	if res := solids.Resolve(player.Rect, 0, player.SpeedY); res.Colliding() {
+		player.Rect.Y += res.ResolveY
+		player.SpeedY = 0
 	} else {
-		mainSquare.Y += int32(squareSpeedY)
+		player.Rect.Y += int32(player.SpeedY)
 	}
 
 }
 
 func (w World2) Draw() {
+
+	player := squares[0]
 
 	for _, shape := range space {
 
@@ -105,7 +113,7 @@ func (w World2) Draw() {
 
 		if ok {
 
-			if rect.GetTag() == "zone" {
+			if rect.HasTags("zone") {
 
 				font, _ := ttf.OpenFont("ARCADEPI.TTF", 12)
 				defer font.Close()
@@ -113,7 +121,7 @@ func (w World2) Draw() {
 				surf, _ := font.RenderUTF8Solid("Isn't touching a zone.", sdl.Color{R: 255, G: 255, B: 255, A: 255})
 
 				renderer.SetDrawColor(255, 255, 0, 255)
-				if rect.IsColliding(mainSquare) {
+				if rect.IsColliding(player.Rect) {
 					surf, _ = font.RenderUTF8Solid("Touching a zone!", sdl.Color{R: 255, G: 255, B: 255, A: 255})
 					renderer.SetDrawColor(255, 0, 0, 255)
 				}
@@ -127,7 +135,7 @@ func (w World2) Draw() {
 
 			}
 
-			if rect == mainSquare {
+			if rect == player.Rect {
 				renderer.SetDrawColor(0, 255, 0, 255)
 			}
 

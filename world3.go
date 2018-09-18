@@ -26,15 +26,15 @@ func (w World3) Create() {
 	space.AddShape(resolv.NewCircle(30, 60, cell))
 
 	for _, shape := range space {
-		shape.SetTag("solid")
+		shape.SetTags("solid")
 	}
 
 	zone := resolv.NewRectangle(screenWidth/2, cell*2, screenWidth/2-(cell*2), screenHeight/2)
-	zone.SetTag("zone")
+	zone.SetTags("zone")
 	space.AddShape(zone)
 
 	secondCircleZone = resolv.NewCircle(70, 70, 8)
-	secondCircleZone.SetTag("zone")
+	secondCircleZone.SetTags("zone")
 	space.AddShape(secondCircleZone)
 
 	mainCircle = resolv.NewCircle(screenWidth/2, screenHeight/2, 32)
@@ -54,13 +54,15 @@ func (w World3) Update() {
 		dx += 2
 	}
 
-	res := space.Resolve(mainCircle, float32(dx), true, "solid")
+	solids := space.FilterByTags("solid")
+
+	res := solids.Resolve(mainCircle, float32(dx), 0)
 
 	if res.Colliding() {
-		dx = res.ResolveDistance
+		mainCircle.X += res.ResolveX
+	} else {
+		mainCircle.X += dx
 	}
-
-	mainCircle.X += dx
 
 	if keyboard.KeyDown(sdl.K_UP) {
 		dy -= 2
@@ -69,13 +71,13 @@ func (w World3) Update() {
 		dy += 2
 	}
 
-	res = space.Resolve(mainCircle, float32(dy), false, "solid")
+	res = solids.Resolve(mainCircle, 0, float32(dy))
 
 	if res.Colliding() {
-		dy = res.ResolveDistance
+		mainCircle.Y += res.ResolveY
+	} else {
+		mainCircle.Y += dy
 	}
-
-	mainCircle.Y += dy
 
 }
 
@@ -93,7 +95,7 @@ func (world World3) Draw() {
 
 		if ok {
 
-			if rect.GetTag() == "zone" {
+			if rect.HasTags("zone") {
 
 				renderer.SetDrawColor(255, 255, 0, 255)
 				if rect.IsColliding(mainCircle) {
@@ -112,7 +114,7 @@ func (world World3) Draw() {
 
 		if ok {
 
-			if circle.GetTag() == "zone" {
+			if circle.HasTags("zone") {
 
 				renderer.SetDrawColor(255, 255, 0, 255)
 				if circle.IsColliding(mainCircle) {
