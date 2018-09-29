@@ -51,9 +51,27 @@ func (sp *Space) Clear() {
 	*sp = make(Space, 0)
 }
 
-// Colliding takes a checking Shape, and checks to see if any of the Shapes in the Space are colliding with it. If so, it adds it
-// to a new Space, and returns it.
-func (sp *Space) Colliding(shape Shape) Space {
+// IsColliding returns whether the provided Shape is colliding with something in this Space.
+func (sp Space) IsColliding(shape Shape) bool {
+
+	for _, other := range sp {
+
+		if other != shape {
+
+			if shape.IsColliding(other) {
+				return true
+			}
+
+		}
+
+	}
+
+	return false
+
+}
+
+// GetCollidingShapes returns a Space comprised of Shapes that collide with the checking Shape.
+func (sp *Space) GetCollidingShapes(shape Shape) Space {
 
 	newSpace := Space{}
 
@@ -245,7 +263,7 @@ func resolve(firstShape Shape, other Shape, xSpeed, ySpeed float32) Collision {
 	out.ResolveX += int32(xSpeed)
 	out.ResolveY += int32(ySpeed)
 
-	if !other.IsCollideable() || (xSpeed == 0 && ySpeed == 0) {
+	if !firstShape.IsCollideable() || !other.IsCollideable() || (xSpeed == 0 && ySpeed == 0) {
 		return out
 	}
 
@@ -348,7 +366,7 @@ func NewRectangle(x, y, w, h int32) *Rectangle {
 // IsColliding returns a boolean, indicating if the Rectangle is colliding with the specified other Shape or not.
 func (r Rectangle) IsColliding(other Shape) bool {
 
-	if !other.IsCollideable() {
+	if !r.IsCollideable() || !other.IsCollideable() {
 		return false
 	}
 
@@ -422,7 +440,7 @@ func distance(x, y, x2, y2 int32) int32 {
 // IsColliding returns true if the Circle is colliding with the specified other Shape.
 func (c Circle) IsColliding(other Shape) bool {
 
-	if !other.IsCollideable() {
+	if !c.IsCollideable() || !other.IsCollideable() {
 		return false
 	}
 
