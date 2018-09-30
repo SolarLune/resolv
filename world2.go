@@ -88,14 +88,14 @@ func (w World2) Update() {
 
 	solids := space.FilterByTags("solid")
 
-	if res := solids.Resolve(player.Rect, player.SpeedX, 0); res.Colliding() {
+	if res := solids.Resolve(player.Rect, int32(player.SpeedX), 0); res.Colliding() {
 		player.Rect.X += res.ResolveX
 		player.SpeedX = 0
 	} else {
 		player.Rect.X += int32(player.SpeedX)
 	}
 
-	if res := solids.Resolve(player.Rect, 0, player.SpeedY); res.Colliding() {
+	if res := solids.Resolve(player.Rect, 0, int32(player.SpeedY)); res.Colliding() {
 		player.Rect.Y += res.ResolveY
 		player.SpeedY = 0
 	} else {

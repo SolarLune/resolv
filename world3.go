@@ -55,7 +55,7 @@ func (w World3) Update() {
 
 	solids := space.FilterByTags("solid")
 
-	res := solids.Resolve(mainCircle, float32(dx), 0)
+	res := solids.Resolve(mainCircle, dx, 0)
 
 	if res.Colliding() {
 		mainCircle.X += res.ResolveX
@@ -70,7 +70,7 @@ func (w World3) Update() {
 		dy += 2
 	}
 
-	res = solids.Resolve(mainCircle, 0, float32(dy))
+	res = solids.Resolve(mainCircle, 0, dy)
 
 	if res.Colliding() {
 		mainCircle.Y += res.ResolveY

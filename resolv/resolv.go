@@ -48,9 +48,9 @@ func (sp *Space) Clear() {
 }
 
 // IsColliding returns whether the provided Shape is colliding with something in this Space.
-func (sp Space) IsColliding(shape Shape) bool {
+func (sp *Space) IsColliding(shape Shape) bool {
 
-	for _, other := range sp {
+	for _, other := range *sp {
 
 		if other != shape {
 
@@ -83,20 +83,21 @@ func (sp *Space) GetCollidingShapes(shape Shape) Space {
 
 }
 
-// Resolve attempts to move the checking shape through space, returning a Collision object with its findings if it collides with
-// any other shapes in the Space. xSpeed and ySpeed are the movement displacement in pixels for the frame. You should generally
-// check for collision resolutions on the X and Y axes separately.
-func (sp *Space) Resolve(checkingShape Shape, xSpeed, ySpeed float32) Collision {
+// Resolve runs Resolve() using the checking Shape, checking against all other Shapes in the Space. The first Collision
+// that returns true is the Collision that gets returned.
+func (sp *Space) Resolve(checkingShape Shape, deltaX, deltaY int32) Collision {
 
 	res := Collision{}
 
 	for _, other := range *sp {
-		if other != checkingShape {
-			res = checkingShape.Resolve(other, xSpeed, ySpeed)
+
+		if other != checkingShape && checkingShape.WouldBeColliding(other, int32(deltaX), int32(deltaY)) {
+			res = Resolve(checkingShape, other, deltaX, deltaY)
 			if res.Colliding() {
-				return res
+				break
 			}
 		}
+
 	}
 
 	return res
@@ -106,9 +107,9 @@ func (sp *Space) Resolve(checkingShape Shape, xSpeed, ySpeed float32) Collision 
 // Filter filters out a Space, returning a new Space comprised of Shapes that return true for the boolean function you provide.
 // This can be used to focus on a set of object for collision testing or resolution, or lower the number of Shapes to test
 // by filtering some out beforehand.
-func (sp Space) Filter(filterFunc func(Shape) bool) Space {
+func (sp *Space) Filter(filterFunc func(Shape) bool) Space {
 	subSpace := make(Space, 0)
-	for _, shape := range sp {
+	for _, shape := range *sp {
 		if filterFunc(shape) {
 			subSpace.AddShape(shape)
 		}
@@ -117,7 +118,7 @@ func (sp Space) Filter(filterFunc func(Shape) bool) Space {
 }
 
 // FilterByTags filters a Space out, creating a new Space that has just the Shapes that have all of the specified tags.
-func (sp Space) FilterByTags(tags ...string) Space {
+func (sp *Space) FilterByTags(tags ...string) Space {
 	return sp.Filter(func(s Shape) bool {
 		if s.HasTags(tags...) {
 			return true
@@ -127,8 +128,8 @@ func (sp Space) FilterByTags(tags ...string) Space {
 }
 
 // Contains returns true if the Shape provided exists within the Space.
-func (sp Space) Contains(shape Shape) bool {
-	for _, s := range sp {
+func (sp *Space) Contains(shape Shape) bool {
+	for _, s := range *sp {
 		if s == shape {
 			return true
 		}
@@ -148,16 +149,16 @@ func (sp *Space) String() string {
 // Space.
 type Shape interface {
 	IsColliding(Shape) bool
+	WouldBeColliding(Shape, int32, int32) bool
 	IsCollideable() bool
 	SetCollideable(bool)
-	Resolve(Shape, float32, float32) Collision
 	GetTags() []string
 	SetTags(...string)
 	HasTags(...string) bool
 	GetData() interface{}
 	SetData(interface{})
-	SetXY(int32, int32)
 	GetXY() (int32, int32)
+	SetXY(int32, int32)
 }
 
 // basicShape isn't to be used; it just has some basic functions and data, common to all structs that embed it, like and position
@@ -170,7 +171,7 @@ type basicShape struct {
 }
 
 // GetTags returns the tags on the Shape.
-func (b basicShape) GetTags() []string {
+func (b *basicShape) GetTags() []string {
 	return b.tags
 }
 
@@ -180,7 +181,7 @@ func (b *basicShape) SetTags(tags ...string) {
 }
 
 // If the Shape has all of the tags provided.
-func (b basicShape) HasTags(tags ...string) bool {
+func (b *basicShape) HasTags(tags ...string) bool {
 
 	hasTags := true
 
@@ -202,7 +203,7 @@ func (b basicShape) HasTags(tags ...string) bool {
 }
 
 // IsCollideable returns whether the Shape is currently collide-able or not.
-func (b basicShape) IsCollideable() bool {
+func (b *basicShape) IsCollideable() bool {
 	return b.Collideable
 }
 
@@ -212,7 +213,7 @@ func (b *basicShape) SetCollideable(on bool) {
 }
 
 // GetData returns the data on the Shape.
-func (b basicShape) GetData() interface{} {
+func (b *basicShape) GetData() interface{} {
 	return b.Data
 }
 
@@ -228,10 +229,8 @@ func (b *basicShape) GetXY() (int32, int32) {
 
 // SetXY sets the position of the Shape.
 func (b *basicShape) SetXY(x, y int32) {
-
 	b.X = x
 	b.Y = y
-
 }
 
 // Collision describes the collision found when a Shape attempted to resolve a movement into another Shape, or in the same Space as
@@ -239,10 +238,10 @@ func (b *basicShape) SetXY(x, y int32) {
 type Collision struct {
 	ResolveX, ResolveY int32
 	// ResolveX and ResolveY represent the displacement of the Shape to the point of collision. How far along the Shape got when
-	// attempting to move along the direction given by xSpeed and ySpeed in the Resolve() function before touching another Shape.
+	// attempting to move along the direction given by deltaX and deltaY in the Resolve() function before touching another Shape.
 	Teleporting bool
 	// Teleporting is if moving according to ResolveX and ResolveY might be considered teleporting, which is moving greater than the
-	// X or Yspeed provided to the Resolve function * 1.5 (this is arbitrary, but can be useful).
+	// X or deltaY provided to the Resolve function * 1.5 (this is arbitrary, but can be useful).
 	OtherShape Shape
 	// OtherShape should be a pointer to the Shape that the colliding object collided with.
 }
@@ -252,71 +251,65 @@ func (c Collision) Colliding() bool {
 	return c.OtherShape != nil
 }
 
-// resolve is a generic function to resolve the attempt of one shape to move up against another one. Individual Shapes' Resolve()
-// functions just point to this function for ease of use.
-func resolve(firstShape Shape, other Shape, xSpeed, ySpeed float32) Collision {
+// Resolve attempts to move the checking Shape with the specified X and Y values, returning a Collision object if it collides with
+// the specified other Shape. The deltaX and deltaY arguments are the movement displacement in pixels. For most situations, you
+// would want to resolve on the X and Y axes separately.
+func Resolve(firstShape Shape, other Shape, deltaX, deltaY int32) Collision {
 
 	out := Collision{}
-	out.ResolveX, out.ResolveY = firstShape.GetXY()
-	out.ResolveX += int32(xSpeed)
-	out.ResolveY += int32(ySpeed)
+	out.ResolveX = deltaX
+	out.ResolveY = deltaY
 
-	if !firstShape.IsCollideable() || !other.IsCollideable() || (xSpeed == 0 && ySpeed == 0) {
+	if !firstShape.IsCollideable() || !other.IsCollideable() || (deltaX == 0 && deltaY == 0) {
 		return out
 	}
 
-	xv, yv := firstShape.GetXY()
-
-	firstShape.SetXY(xv+int32(xSpeed), yv+int32(ySpeed))
-
-	x := float32(xv) + xSpeed
-	y := float32(yv) + ySpeed
+	x := float32(deltaX)
+	y := float32(deltaY)
 
 	primeX := true
-	var slope float32
+	slope := float32(0)
 
-	if ySpeed != 0 && xSpeed != 0 {
-		slope = ySpeed / xSpeed
+	if deltaY != 0 && deltaX != 0 {
+		slope = float32(deltaY) / float32(deltaX)
 	}
 
-	if math.Abs(float64(ySpeed)) > math.Abs(float64(xSpeed)) {
+	if math.Abs(float64(deltaY)) > math.Abs(float64(deltaX)) {
 		primeX = false
-		if ySpeed != 0 && xSpeed != 0 {
-			slope = xSpeed / ySpeed
+		if deltaY != 0 && deltaX != 0 {
+			slope = float32(deltaX) / float32(deltaY)
 		}
 	}
 
-	colliding := true
+	for true {
 
-	for colliding {
-
-		if firstShape.IsColliding(other) {
+		if firstShape.WouldBeColliding(other, out.ResolveX, out.ResolveY) {
 
 			if primeX {
 
-				if xSpeed > 0 {
+				if deltaX > 0 {
 					x--
-				} else if xSpeed < 0 {
+				} else if deltaX < 0 {
 					x++
 				}
 
-				if ySpeed > 0 {
+				if deltaY > 0 {
 					y -= slope
-				} else if ySpeed < 0 {
+				} else if deltaY < 0 {
 					y += slope
 				}
 
 			} else {
 
-				if ySpeed > 0 {
+				if deltaY > 0 {
 					y--
-				} else if ySpeed < 0 {
+				} else if deltaY < 0 {
 					y++
 				}
 
-				if xSpeed > 0 {
+				if deltaX > 0 {
 					x -= slope
-				} else if xSpeed < 0 {
+				} else if deltaX < 0 {
 					x += slope
 				}
 
@@ -325,20 +318,15 @@ func resolve(firstShape Shape, other Shape, xSpeed, ySpeed float32) Collision {
 			out.ResolveX = int32(x)
 			out.ResolveY = int32(y)
 
-			firstShape.SetXY(out.ResolveX, out.ResolveY)
-
 			out.OtherShape = other
 
 		} else {
-			colliding = false
+			break
 		}
 
 	}
 
-	out.ResolveX -= xv
-	out.ResolveY -= yv
-
-	if math.Abs(float64(xSpeed-float32(out.ResolveX))) > math.Abs(float64(xSpeed*1.5)) || math.Abs(float64(ySpeed-float32(out.ResolveY))) > math.Abs(float64(ySpeed*1.5)) {
+	if math.Abs(float64(deltaX-out.ResolveX)) > math.Abs(float64(deltaX)*1.5) || math.Abs(float64(deltaY-out.ResolveY)) > math.Abs(float64(deltaY)*1.5) {
 		out.Teleporting = true
 	}
 
@@ -361,10 +349,10 @@ func NewRectangle(x, y, w, h int32) *Rectangle {
 	return r
 }
 
-// IsColliding returns a boolean, indicating if the Rectangle is colliding with the specified other Shape or not.
-func (r Rectangle) IsColliding(other Shape) bool {
+// IsColliding returns whether the Rectangle is colliding with the specified other Shape or not.
+func (r *Rectangle) IsColliding(other Shape) bool {
 
-	if !r.IsCollideable() || !other.IsCollideable() {
+	if !r.Collideable || !other.IsCollideable() {
 		return false
 	}
 
@@ -377,7 +365,7 @@ func (r Rectangle) IsColliding(other Shape) bool {
 	c, ok := other.(*Circle)
 
 	if ok {
-		return c.IsColliding(&r)
+		return c.IsColliding(r)
 	}
 
 	fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against a Rectangle ", r, "!")
@@ -385,29 +373,29 @@ func (r Rectangle) IsColliding(other Shape) bool {
 	return false
 }
 
+// WouldBeColliding returns whether the Rectangle would be colliding with the other Shape if it were to move in the
+// specified direction.
+func (r *Rectangle) WouldBeColliding(other Shape, dx, dy int32) bool {
+	r.X += dx
+	r.Y += dy
+	isColliding := r.IsColliding(other)
+	r.X -= dx
+	r.Y -= dy
+	return isColliding
+}
+
 // IsZero returns whether the Rectangle has been initialized or not.
-func (r Rectangle) IsZero() bool {
+func (r *Rectangle) IsZero() bool {
 	return r.X == 0 && r.Y == 0 && r.W == 0 && r.H == 0
 }
 
 // Center returns the center point of the Rectangle.
-func (r Rectangle) Center() (int32, int32) {
+func (r *Rectangle) Center() (int32, int32) {
 
 	x := r.X + r.W/2
 	y := r.Y + r.H/2
 
 	return x, y
-
-}
-
-// Resolve attempts to move the checking shape through space, returning a Collision object with its findings if it collides with
-// the specified other Shape. The xSpeed and ySpeed arguments are the movement displacement in pixels (note that collision resolution
-// operates on, naturally, whole pixels still). For most situations, you would want to resolve on the X and Y axes separately.
-func (r *Rectangle) Resolve(other Shape, xSpeed, ySpeed float32) Collision {
-
-	// Because the resolve function is the same for all the shapes, essentially
-	rect := *r
-	return resolve(&rect, other, xSpeed, ySpeed)
 
 }
 
@@ -436,9 +424,9 @@ func distance(x, y, x2, y2 int32) int32 {
 }
 
 // IsColliding returns true if the Circle is colliding with the specified other Shape.
-func (c Circle) IsColliding(other Shape) bool {
+func (c *Circle) IsColliding(other Shape) bool {
 
-	if !c.IsCollideable() || !other.IsCollideable() {
+	if !c.Collideable || !other.IsCollideable() {
 		return false
 	}
 
@@ -479,18 +467,19 @@ func (c Circle) IsColliding(other Shape) bool {
 
 }
 
-// Resolve attempts to move the checking shape through space, returning a Collision object with its findings if it collides with
-// the specified other Shape. The xSpeed and ySpeed arguments are the movement displacement in pixels (note that collision resolution
-// operates on, naturally, whole pixels still). For most situations, you would want to resolve on the X and Y axes separately.
-func (c *Circle) Resolve(other Shape, xSpeed, ySpeed float32) Collision {
-
-	circle := *c
-	return resolve(&circle, other, xSpeed, ySpeed)
-
+// WouldBeColliding returns whether the Rectangle would be colliding with the specified other Shape if it were to move
+// in the specified direction.
+func (c *Circle) WouldBeColliding(other Shape, dx, dy int32) bool {
+	c.X += dx
+	c.Y += dy
+	isColliding := c.IsColliding(other)
+	c.X -= dx
+	c.Y -= dy
+	return isColliding
 }
 
 // GetBoundingRect returns a Rectangle which has a width and height of 2*Radius.
-func (c Circle) GetBoundingRect() *Rectangle {
+func (c *Circle) GetBoundingRect() *Rectangle {
 	r := &Rectangle{}
 	r.W = c.Radius * 2
 	r.H = c.Radius * 2

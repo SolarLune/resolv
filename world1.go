@@ -12,9 +12,10 @@ import (
 type World1 struct{}
 
 type Bouncer struct {
-	Rect   *resolv.Rectangle
-	SpeedX float32
-	SpeedY float32
+	Rect        *resolv.Rectangle
+	SpeedX      float32
+	SpeedY      float32
+	BounceFrame float32
 }
 
 var squares []*Bouncer
@@ -87,19 +88,22 @@ func (w World1) Update() {
 	for _, bouncer := range squares {
 
 		bouncer.SpeedY += 0.25
+		bouncer.BounceFrame *= .9
 
 		// The additional teleporting check means that it won't resolve in a way that would cause it to move inordinately far (i.e.
 		// teleporting). See the docs in resolv.go to see exactly what Teleporting is defined as.
-		if res := solids.Resolve(bouncer.Rect, bouncer.SpeedX, 0); res.Colliding() && !res.Teleporting {
+		if res := solids.Resolve(bouncer.Rect, int32(bouncer.SpeedX), 0); res.Colliding() && !res.Teleporting {
 			bouncer.Rect.X += res.ResolveX
 			bouncer.SpeedX *= -1
+			bouncer.BounceFrame = 1
 		} else {
 			bouncer.Rect.X += int32(bouncer.SpeedX)
 		}
 
-		if res := solids.Resolve(bouncer.Rect, 0, bouncer.SpeedY); res.Colliding() && !res.Teleporting {
+		if res := solids.Resolve(bouncer.Rect, 0, int32(bouncer.SpeedY)); res.Colliding() && !res.Teleporting {
 			bouncer.Rect.Y += res.ResolveY
 			bouncer.SpeedY *= -1
+			bouncer.BounceFrame = 1
 		} else {
 			bouncer.Rect.Y += int32(bouncer.SpeedY)
 		}
@@ -140,17 +144,28 @@ func (w World1) Draw() {
 
 	for _, shape := range space {
 
-		rect, ok := shape.(*resolv.Rectangle)
+		// Living on the edge~~~
+		// We know that this Space just has Rectangles, so we'll just assume they are
 
-		renderer.SetDrawColor(255, 255, 255, 255)
+		rect := shape.(*resolv.Rectangle)
 
-		if rect.HasTags("bouncer") {
-			renderer.SetDrawColor(60, 180, 255, 255)
-		}
+		if !rect.HasTags("bouncer") {
 
-		if ok {
+			renderer.SetDrawColor(255, 255, 255, 255)
+
 			renderer.DrawRect(&sdl.Rect{X: rect.X, Y: rect.Y, W: rect.W, H: rect.H})
+
 		}
+
+	}
+
+	for _, b := range squares {
+
+		g := uint8(60) + uint8((255-60)*b.BounceFrame)
+
+		renderer.SetDrawColor(60, g, 255, 255)
+
+		renderer.DrawRect(&sdl.Rect{X: b.Rect.X, Y: b.Rect.Y, W: b.Rect.W, H: b.Rect.H})
 
 	}
 

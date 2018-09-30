@@ -10,14 +10,16 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
-var screenWidth int32 = 640
-var screenHeight int32 = 480
+var screenWidth int32 = 1280
+var screenHeight int32 = 720
 
 var space resolv.Space
 var renderer *sdl.Renderer
 var avgFramerate int
 
 func main() {
+
+	// defer profile.Start(profile.ProfilePath(".")).Stop()
 
 	sdl.Init(sdl.INIT_EVERYTHING)
 	defer sdl.Quit()
