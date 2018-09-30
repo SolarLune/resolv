@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/gfx"
@@ -9,8 +10,8 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
-var screenWidth int32 = 320
-var screenHeight int32 = 240
+var screenWidth int32 = 640
+var screenHeight int32 = 480
 
 var space resolv.Space
 var renderer *sdl.Renderer
@@ -30,7 +31,7 @@ func main() {
 
 	win.SetResizable(true)
 
-	renderer.SetLogicalSize(320, 240)
+	renderer.SetLogicalSize(screenWidth, screenHeight)
 
 	fpsMan := &gfx.FPSmanager{}
 	gfx.InitFramerate(fpsMan)
@@ -92,8 +93,29 @@ func main() {
 
 		frameCount++
 
+		DrawText(strconv.Itoa(avgFramerate), screenWidth-32, 0)
+
 		renderer.Present()
 
 	}
+
+}
+
+func DrawText(text string, x, y int32) {
+
+	font, _ := ttf.OpenFont("ARCADEPI.TTF", 12)
+	defer font.Close()
+
+	var surf *sdl.Surface
+
+	surf, _ = font.RenderUTF8Solid(text, sdl.Color{R: 255, G: 255, B: 255, A: 255})
+
+	textSurface, _ := renderer.CreateTextureFromSurface(surf)
+	defer textSurface.Destroy()
+
+	_, _, w, h, _ := textSurface.Query()
+
+	textSurface.SetAlphaMod(100)
+	renderer.Copy(textSurface, &sdl.Rect{X: 0, Y: 0, W: w, H: h}, &sdl.Rect{X: x, Y: y, W: w, H: h})
 
 }

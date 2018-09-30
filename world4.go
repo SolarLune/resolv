@@ -46,6 +46,7 @@ func (w World4) Update() {
 
 func (w World4) Draw() {
 
-	// No drawing for this to make sure that GPU isn't slowing down the CPU; this is a pure CPU thrash-test.
+	DrawText("There's nothing to do or see here", 0, 0)
+	DrawText("because this is a pure CPU thrash-test.", 0, 16)
 
 }

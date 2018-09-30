@@ -5,7 +5,6 @@ import (
 
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/sdl"
-	"github.com/veandco/go-sdl2/ttf"
 )
 
 var mainCircle *resolv.Circle
@@ -85,7 +84,7 @@ func (world World3) Draw() {
 
 	renderer.Clear()
 
-	touching := false
+	touching := "Not touching a zone"
 
 	for _, shape := range space {
 
@@ -99,7 +98,7 @@ func (world World3) Draw() {
 
 				renderer.SetDrawColor(255, 255, 0, 255)
 				if rect.IsColliding(mainCircle) {
-					touching = true
+					touching = "Touching a zone"
 					renderer.SetDrawColor(255, 0, 0, 255)
 				}
 
@@ -118,7 +117,7 @@ func (world World3) Draw() {
 
 				renderer.SetDrawColor(255, 255, 0, 255)
 				if circle.IsColliding(mainCircle) {
-					touching = true
+					touching = "Touching a zone"
 					renderer.SetDrawColor(255, 0, 0, 255)
 				}
 
@@ -150,22 +149,6 @@ func (world World3) Draw() {
 
 	}
 
-	font, _ := ttf.OpenFont("ARCADEPI.TTF", 12)
-	defer font.Close()
-
-	var surf *sdl.Surface
-
-	if touching {
-		surf, _ = font.RenderUTF8Solid("Touching a zone!", sdl.Color{R: 255, G: 255, B: 255, A: 255})
-	} else {
-		surf, _ = font.RenderUTF8Solid("Isn't touching a zone.", sdl.Color{R: 255, G: 255, B: 255, A: 255})
-	}
-
-	text, _ := renderer.CreateTextureFromSurface(surf)
-	defer text.Destroy()
-
-	_, _, w, h, _ := text.Query()
-
-	renderer.Copy(text, &sdl.Rect{X: 0, Y: 0, W: w, H: h}, &sdl.Rect{X: 0, Y: 0, W: w, H: h})
+	DrawText(touching, 0, 0)
 
 }

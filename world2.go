@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/sdl"
-	"github.com/veandco/go-sdl2/ttf"
 )
 
 type World2 struct{}
@@ -23,6 +22,10 @@ func (w World2) Create() {
 	}
 
 	zone := resolv.NewRectangle(screenWidth/2, cell*2, screenWidth/2-(cell*2), screenHeight/2)
+	zone.SetTags("zone")
+	space.AddShape(zone)
+
+	zone = resolv.NewRectangle(cell*4, cell*7, cell*2, cell*4)
 	zone.SetTags("zone")
 	space.AddShape(zone)
 
@@ -105,6 +108,10 @@ func (w World2) Draw() {
 
 	player := squares[0]
 
+	DrawText("Use the arrow keys to move", 0, 0)
+
+	touching := "You aren't touching a zone"
+
 	for _, shape := range space {
 
 		renderer.SetDrawColor(255, 255, 255, 255)
@@ -115,23 +122,11 @@ func (w World2) Draw() {
 
 			if rect.HasTags("zone") {
 
-				font, _ := ttf.OpenFont("ARCADEPI.TTF", 12)
-				defer font.Close()
-
-				surf, _ := font.RenderUTF8Solid("Isn't touching a zone.", sdl.Color{R: 255, G: 255, B: 255, A: 255})
-
 				renderer.SetDrawColor(255, 255, 0, 255)
 				if rect.IsColliding(player.Rect) {
-					surf, _ = font.RenderUTF8Solid("Touching a zone!", sdl.Color{R: 255, G: 255, B: 255, A: 255})
 					renderer.SetDrawColor(255, 0, 0, 255)
+					touching = "You ARE touching a zone"
 				}
-
-				text, _ := renderer.CreateTextureFromSurface(surf)
-				defer text.Destroy()
-
-				_, _, w, h, _ := text.Query()
-
-				renderer.Copy(text, &sdl.Rect{X: 0, Y: 0, W: w, H: h}, &sdl.Rect{X: 0, Y: 0, W: w, H: h})
 
 			}
 
@@ -144,5 +139,7 @@ func (w World2) Draw() {
 		}
 
 	}
+
+	DrawText(touching, 0, 16)
 
 }

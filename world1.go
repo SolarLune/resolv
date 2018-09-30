@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/sdl"
@@ -25,6 +26,18 @@ func MakeNewBouncer() *Bouncer {
 	bouncer := &Bouncer{Rect: resolv.NewRectangle(cell*2+rand.Int31n(screenWidth-cell*4), cell*2+rand.Int31n(screenHeight-cell*4), cell, cell),
 		SpeedX: (0.5 - rand.Float32()) * 8,
 		SpeedY: (0.5 - rand.Float32()) * 8}
+
+	// Attempt to not spawn a Bouncer in an occupied location
+	for i := 0; i < 100; i++ {
+
+		if space.IsColliding(bouncer.Rect) {
+
+			bouncer.Rect.X = cell*2 + rand.Int31n(screenWidth-cell*4)
+			bouncer.Rect.Y = cell*2 + rand.Int31n(screenHeight-cell*4)
+
+		}
+
+	}
 
 	bouncer.Rect.SetTags("bouncer", "solid")
 
@@ -69,20 +82,22 @@ func (w World1) Create() {
 
 func (w World1) Update() {
 
+	solids := space.FilterByTags("solid")
+
 	for _, bouncer := range squares {
 
 		bouncer.SpeedY += 0.25
 
 		// The additional teleporting check means that it won't resolve in a way that would cause it to move inordinately far (i.e.
-		// teleporting.). See the docs in resolv.go to see exactly what Teleporting is defined as.
-		if res := space.Resolve(bouncer.Rect, bouncer.SpeedX, 0); res.Colliding() && !res.Teleporting {
+		// teleporting). See the docs in resolv.go to see exactly what Teleporting is defined as.
+		if res := solids.Resolve(bouncer.Rect, bouncer.SpeedX, 0); res.Colliding() && !res.Teleporting {
 			bouncer.Rect.X += res.ResolveX
 			bouncer.SpeedX *= -1
 		} else {
 			bouncer.Rect.X += int32(bouncer.SpeedX)
 		}
 
-		if res := space.Resolve(bouncer.Rect, 0, bouncer.SpeedY); res.Colliding() && !res.Teleporting {
+		if res := solids.Resolve(bouncer.Rect, 0, bouncer.SpeedY); res.Colliding() && !res.Teleporting {
 			bouncer.Rect.Y += res.ResolveY
 			bouncer.SpeedY *= -1
 		} else {
@@ -94,6 +109,29 @@ func (w World1) Update() {
 	if keyboard.KeyDown(sdl.K_UP) {
 		MakeNewBouncer()
 		fmt.Println(len(squares), " bouncers in the world now.")
+	}
+
+	if keyboard.KeyDown(sdl.K_DOWN) {
+
+		bouncers := space.FilterByTags("bouncer")
+
+		if len(bouncers) > 0 {
+
+			space.RemoveShape(bouncers[0])
+
+			for i, b := range squares {
+
+				if b.Rect == bouncers[0] {
+					squares[i] = nil
+					squares = append(squares[:i], squares[i+1:]...)
+				}
+
+			}
+
+			fmt.Println(len(squares), " bouncers in the world now.")
+
+		}
+
 	}
 
 }
@@ -115,5 +153,11 @@ func (w World1) Draw() {
 		}
 
 	}
+
+	DrawText("Press Up to spawn bouncers", 32, 16)
+	DrawText("Press Down to remove bouncers", 32, 32)
+	DrawText("Press 'R' to restart with a new", 32, 48)
+	DrawText("layout", 32, 64)
+	DrawText(strconv.Itoa(len(squares))+" bouncers in the world", 32, 80)
 
 }

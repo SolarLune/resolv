@@ -24,24 +24,20 @@ func (sp *Space) AddShape(shape Shape) {
 // RemoveShape removes the designated Shape from the Space.
 func (sp *Space) RemoveShape(shape Shape) {
 
-	i := 0
+	deleteIndex := -1
 
-	oldSpace := *sp
-
-	for _, s := range oldSpace {
+	for i, s := range *sp {
 		if s == shape {
+			deleteIndex = i
 			break
 		}
-		i++
 	}
 
-	*sp = make(Space, 0)
-
-	if len(oldSpace) > i+1 {
-		*sp = append(*sp, oldSpace[:i]...)
-		*sp = append(*sp, oldSpace[i+1:]...) // Don't forget to EXTRACT the elements in the list~
-	} else {
-		*sp = oldSpace[:i]
+	if deleteIndex >= 0 {
+		s := *sp
+		s[deleteIndex] = nil
+		s = append(s[:deleteIndex], s[deleteIndex+1:]...)
+		*sp = s
 	}
 
 }
@@ -92,16 +88,18 @@ func (sp *Space) GetCollidingShapes(shape Shape) Space {
 // check for collision resolutions on the X and Y axes separately.
 func (sp *Space) Resolve(checkingShape Shape, xSpeed, ySpeed float32) Collision {
 
+	res := Collision{}
+
 	for _, other := range *sp {
 		if other != checkingShape {
-			res := checkingShape.Resolve(other, xSpeed, ySpeed)
+			res = checkingShape.Resolve(other, xSpeed, ySpeed)
 			if res.Colliding() {
 				return res
 			}
 		}
 	}
 
-	return Collision{}
+	return res
 
 }
 
@@ -489,4 +487,14 @@ func (c *Circle) Resolve(other Shape, xSpeed, ySpeed float32) Collision {
 	circle := *c
 	return resolve(&circle, other, xSpeed, ySpeed)
 
+}
+
+// GetBoundingRect returns a Rectangle which has a width and height of 2*Radius.
+func (c Circle) GetBoundingRect() *Rectangle {
+	r := &Rectangle{}
+	r.W = c.Radius * 2
+	r.H = c.Radius * 2
+	r.X = c.X - r.W/2
+	r.Y = c.Y - r.H/2
+	return r
 }
