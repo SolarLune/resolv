@@ -1,9 +1,7 @@
 
 # resolv
 
-![resolv_2](https://user-images.githubusercontent.com/4733521/45698619-48863200-bb1d-11e8-8fab-f1f359fea8b3.gif)
-
-![resolv_1](https://user-images.githubusercontent.com/4733521/45585063-0c3fa100-b893-11e8-93df-7a14be9992ae.gif)
+![resolv_v02 gif](https://user-images.githubusercontent.com/4733521/46297121-c18b7d80-c550-11e8-9854-728e0aa7ab36.gif)
 
 ## What is resolv?
 
@@ -17,7 +15,7 @@ Because it's like... You know, collision resolution? To resolve a collision? So.
 
 ## Why did you create resolv?
 
-Because I was making games and frequently found that most frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most 2D games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for arcade applications.
+Because I was making games and frequently found that most frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games.
 
 ## How do you install it?
 
@@ -58,14 +56,14 @@ func Update() {
     // Here, we check to see if there's a collision should shape1 try to move to the right by 10 pixels. The Resolve()
     // functions return a Collision object that has information about whether the attempted movement would work,
     // and whether it resulted in a collision or not.
-    collision := shape1.Resolve(shape2, dx, 0)
+    resolution := resolv.Resolve(shape1, shape2, dx, 0)
 
-    if collision.Colliding() {
+    if resolution.Colliding() {
         
         // If there was a collision, then shape1 couldn't move fully to the right. It came into contact with shape2,
         // and the variable collision now holds a Collision object with helpful information, like how far it was able to move.
         // Move the shape over to the right by the distance that it can to come into full contact with shape2.
-        shape1.X += collision.ResolveX
+        shape1.X += resolution.ResolveX
 
     } else {
 
@@ -74,15 +72,23 @@ func Update() {
 
     }
 
+    // We can also do collision testing only pretty simply:
+
+    collision := shape1.IsColliding(shape2)
+
 }
 
 // That's it!
 
 ```
 
-This is fine for simple testing, but if you have a more complex game with a lot more Shapes, then you would have to check each Shape against each other Shape. This is awkward for the developer to code, so I also added Spaces. 
+This is fine for simple testing, but if you have even a slightly more complex game with a lot more Shapes, then you would have to check each Shape against each other Shape. This is a bit awkward for the developer to code, so I also added Spaces. 
 
-A Space represents a container for Shapes to exist in and test against. This way, the fundamentals are the same, but it should scale up more easily, since you don't have to do manual for checking everywhere you want to test a Shape against others. A Space is just a collection of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Here's an example using a Space to check one shape against others more easily:
+A Space represents a container for Shapes to exist in and test against. This way, the fundamentals are the same, but it should scale up more easily, since you don't have to do manual for checking everywhere you want to test a Shape against others. 
+
+A Space is just a collection of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces being simple containers means that they can also be filtered out as necessary to easily test a smaller selection of Shapes when desired.
+
+Here's an example using a Space to check one Shape against others:
 
 ```go
 
@@ -99,8 +105,8 @@ func Init() {
     // Create one rectangle - we'll say this one represents our player.
     playerRect = resolv.NewRectangle(40, 40, 16, 16)
 
-    // Note that we don't have to add the Player Rectangle to the space; this is only if we want it to also be seen if 
-    // a Shape uses the Space for collision detection or resolution.
+    // Note that we don't have to add the Player Rectangle to the space; this is only if we want it to also be checked
+    // for collision testing and resolution within the Space.
     space.AddShape(playerRect)
 
     // Create some more Rectangles to represent level bounds.

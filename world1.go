@@ -9,7 +9,9 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-type World1 struct{}
+type World1 struct {
+	DrawInfo bool
+}
 
 type Bouncer struct {
 	Rect        *resolv.Rectangle
@@ -21,8 +23,6 @@ type Bouncer struct {
 var squares []*Bouncer
 
 func MakeNewBouncer() *Bouncer {
-
-	var cell int32 = 16
 
 	bouncer := &Bouncer{Rect: resolv.NewRectangle(cell*2+rand.Int31n(screenWidth-cell*4), cell*2+rand.Int31n(screenHeight-cell*4), cell, cell),
 		SpeedX: (0.5 - rand.Float32()) * 8,
@@ -50,11 +50,12 @@ func MakeNewBouncer() *Bouncer {
 
 }
 
-func (w World1) Create() {
+func (w *World1) Create() {
+
+	w.DrawInfo = true
 
 	squares = make([]*Bouncer, 0)
 
-	var cell int32 = 16
 	var screenCellWidth = screenWidth / cell
 	var screenCellHeight = screenHeight / cell
 
@@ -67,10 +68,10 @@ func (w World1) Create() {
 	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
 	space.AddShape(resolv.NewRectangle(cell, screenHeight-cell, screenWidth-(cell*2), cell))
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		x := rand.Int31n(screenCellWidth - 2)
 		y := rand.Int31n(screenCellHeight - 2)
-		space.AddShape(resolv.NewRectangle(cell+(x*cell), cell+(y*cell), cell*(1+rand.Int31n(8)), cell))
+		space.AddShape(resolv.NewRectangle(cell+(x*cell), cell+(y*cell), cell*(1+rand.Int31n(16)), cell*(1+rand.Int31n(16))))
 	}
 
 	for _, shape := range space {
@@ -81,7 +82,7 @@ func (w World1) Create() {
 
 }
 
-func (w World1) Update() {
+func (w *World1) Update() {
 
 	solids := space.FilterByTags("solid")
 
@@ -89,6 +90,18 @@ func (w World1) Update() {
 
 		bouncer.SpeedY += 0.25
 		bouncer.BounceFrame *= .9
+
+		if bouncer.SpeedY > float32(cell) {
+			bouncer.SpeedY = float32(cell)
+		} else if bouncer.SpeedY < -float32(cell) {
+			bouncer.SpeedY = -float32(cell)
+		}
+
+		if bouncer.SpeedX > float32(cell) {
+			bouncer.SpeedX = float32(cell)
+		} else if bouncer.SpeedX < -float32(cell) {
+			bouncer.SpeedX = -float32(cell)
+		}
 
 		// The additional teleporting check means that it won't resolve in a way that would cause it to move inordinately far (i.e.
 		// teleporting). See the docs in resolv.go to see exactly what Teleporting is defined as.
@@ -138,6 +151,10 @@ func (w World1) Update() {
 
 	}
 
+	if keyboard.KeyPressed(sdl.K_F1) {
+		w.DrawInfo = !w.DrawInfo
+	}
+
 }
 
 func (w World1) Draw() {
@@ -169,10 +186,12 @@ func (w World1) Draw() {
 
 	}
 
-	DrawText("Press Up to spawn bouncers", 32, 16)
-	DrawText("Press Down to remove bouncers", 32, 32)
-	DrawText("Press 'R' to restart with a new", 32, 48)
-	DrawText("layout", 32, 64)
-	DrawText(strconv.Itoa(len(squares))+" bouncers in the world", 32, 80)
-
+	if w.DrawInfo {
+		DrawText("Press Up to spawn bouncers", 32, 16)
+		DrawText("Press Down to remove bouncers", 32, 32)
+		DrawText("Press 'R' to restart with a new", 32, 48)
+		DrawText("layout", 32, 64)
+		DrawText(strconv.Itoa(len(squares))+" bouncers in the world", 32, 80)
+		DrawText("Press F1 to turn on or off this text", 32, 96)
+	}
 }

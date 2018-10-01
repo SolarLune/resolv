@@ -10,8 +10,9 @@ import (
 	"github.com/veandco/go-sdl2/ttf"
 )
 
-var screenWidth int32 = 1280
-var screenHeight int32 = 720
+var screenWidth int32 = 320
+var screenHeight int32 = 240
+var cell int32 = 4
 
 var space resolv.Space
 var renderer *sdl.Renderer
