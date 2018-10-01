@@ -3,6 +3,8 @@
 
 ![resolv_v02 gif](https://user-images.githubusercontent.com/4733521/46297121-c18b7d80-c550-11e8-9854-728e0aa7ab36.gif)
 
+[GoDocs](https://godoc.org/github.com/SolarLune/resolv/resolv)
+
 ## What is resolv?
 
 resolv is a library specifically created for simple arcade (non-realistic) collision detection and resolution for video games. resolv is created in the Go language, but the core concepts are very straightforward and could be easily adapted for use with other languages or game engines and frameworks.
@@ -180,6 +182,8 @@ func Update() {
 ```
 
 Welp, that's about it. If you want to see more info, feel free to examine the main.go and world.go tests to see how a couple of quick example tests are set up.
+
+[You can check out the GoDoc link here, as well.](https://godoc.org/github.com/SolarLune/resolv/resolv)
 
 ## Dependencies?
 
