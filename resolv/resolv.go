@@ -444,7 +444,7 @@ func (c *Circle) IsColliding(other Shape) bool {
 
 	if ok {
 
-		return Distance(c.X, c.Y, b.X, b.Y) <= (c.Radius+b.Radius)*(c.Radius+b.Radius)
+		return Distance(c.X, c.Y, b.X, b.Y) <= c.Radius+b.Radius
 
 	}
 
@@ -467,7 +467,7 @@ func (c *Circle) IsColliding(other Shape) bool {
 			closestY = r.Y + r.H
 		}
 
-		return Distance(c.X, c.Y, closestX, closestY) <= c.Radius*c.Radius
+		return Distance(c.X, c.Y, closestX, closestY) <= c.Radius
 
 	}
 
@@ -504,6 +504,6 @@ func Distance(x, y, x2, y2 int32) int32 {
 	dx := x - x2
 	dy := y - y2
 	ds := (dx * dx) + (dy * dy)
-	return int32(math.Abs(float64(ds)))
+	return int32(math.Sqrt(math.Abs(float64(ds))))
 
 }
