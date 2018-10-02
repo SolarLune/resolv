@@ -19,13 +19,13 @@ Because it's like... You know, collision resolution? To resolve a collision? So.
 
 Because I was making games and frequently found that most frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games.
 
-## How do you install it?
+## How do I install it?
 
 It should be as simple as just go getting it and importing it in your game application.
 
 `go get github.com/SolarLune/resolv`
 
-## How do you use it?
+## How do I use it?
 
 There's two ways to use resolv. One way is to simply create two Shapes, and then check for a collision between them, or attempt to resolve a movement of one into the other, like below:
 
@@ -43,7 +43,7 @@ func Init() {
     shape1 = resolv.NewRectangle(10, 10, 16, 16)
 
     // Create another rectangle, as well.
-    shape2 = resolv.NewRectangle(11, 100, 0, 0)
+    shape2 = resolv.NewRectangle(11, 100, 16, 16)
 
 }
 
@@ -88,7 +88,7 @@ This is fine for simple testing, but if you have even a slightly more complex ga
 
 A Space represents a container for Shapes to exist in and test against. This way, the fundamentals are the same, but it should scale up more easily, since you don't have to do manual for checking everywhere you want to test a Shape against others. 
 
-A Space is just a collection of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces being simple containers means that they can also be filtered out as necessary to easily test a smaller selection of Shapes when desired.
+A Space is just a Slice of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces being simple slices means that they can also be filtered out as necessary to easily test a smaller selection of Shapes when desired.
 
 Here's an example using a Space to check one Shape against others:
 

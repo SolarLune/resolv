@@ -11,7 +11,7 @@ in a specified direction. If so, the Resolve() function would return a Collision
 Collision, like how far the checking Shape would have to move to come into contact with the other, and which Shape it comes into
 contact with.
 
-A Space is a collection that holds Shapes for detection. It doesn't represent any real physical space, and so there aren't any
+A Space is just a slice that holds Shapes for detection. It doesn't represent any real physical space, and so there aren't any
 units of measurement to remember when using Spaces. Similar to Shapes, Spaces are simple, but also very powerful. Spaces allow
 you to easily check for collision with, and resolve collision against multiple Shapes within that Space. A Space being just a
 collection of Shapes means that you can manipulate and filter them as necessary.
@@ -25,6 +25,7 @@ import (
 
 // Space represents a collection that holds Shapes for collision detection in the same common space. A Space is arbitrarily large -
 // you can use one Space for a single level, room, or area in your game, or split it up if it makes more sense for your game design.
+// Technically, a Space is just a slice of Shapes.
 type Space []Shape
 
 // NewSpace creates a new Space for shapes to exist in and be tested against in.
@@ -34,7 +35,7 @@ func NewSpace() Space {
 	return sp
 }
 
-// AddShape adds the designated Shapes to the Space collection.
+// AddShape adds the designated Shapes to the Space.
 func (sp *Space) AddShape(shapes ...Shape) {
 	*sp = append(*sp, shapes...)
 }
@@ -432,15 +433,6 @@ func NewCircle(x, y, radius int32) *Circle {
 	return c
 }
 
-func distance(x, y, x2, y2 int32) int32 {
-
-	dx := x - x2
-	dy := y - y2
-	ds := (dx * dx) + (dy * dy)
-	return int32(math.Abs(float64(ds)))
-
-}
-
 // IsColliding returns true if the Circle is colliding with the specified other Shape.
 func (c *Circle) IsColliding(other Shape) bool {
 
@@ -452,7 +444,7 @@ func (c *Circle) IsColliding(other Shape) bool {
 
 	if ok {
 
-		return distance(c.X, c.Y, b.X, b.Y) <= (c.Radius+b.Radius)*(c.Radius+b.Radius)
+		return Distance(c.X, c.Y, b.X, b.Y) <= (c.Radius+b.Radius)*(c.Radius+b.Radius)
 
 	}
 
@@ -475,7 +467,7 @@ func (c *Circle) IsColliding(other Shape) bool {
 			closestY = r.Y + r.H
 		}
 
-		return distance(c.X, c.Y, closestX, closestY) <= c.Radius*c.Radius
+		return Distance(c.X, c.Y, closestX, closestY) <= c.Radius*c.Radius
 
 	}
 
@@ -504,4 +496,14 @@ func (c *Circle) GetBoundingRect() *Rectangle {
 	r.X = c.X - r.W/2
 	r.Y = c.Y - r.H/2
 	return r
+}
+
+// Distance returns the distance from one pair of X and Y values to another.
+func Distance(x, y, x2, y2 int32) int32 {
+
+	dx := x - x2
+	dy := y - y2
+	ds := (dx * dx) + (dy * dy)
+	return int32(math.Abs(float64(ds)))
+
 }
