@@ -14,7 +14,7 @@ var resolvers []*resolv.Rectangle
 
 func (w World4) Create() {
 
-	space = resolv.NewSpace()
+	space.Clear()
 
 	resolvers = make([]*resolv.Rectangle, 0)
 
@@ -24,7 +24,7 @@ func (w World4) Create() {
 	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
 	space.AddShape(resolv.NewRectangle(cell, screenHeight-cell, screenWidth-(cell*2), cell))
 
-	for x := 0; x < 400; x++ {
+	for x := 0; x < 8000; x++ {
 		rect := resolv.NewRectangle(rand.Int31n(screenWidth), rand.Int31n(screenHeight), 16, 16)
 		resolvers = append(resolvers, rect)
 	}
@@ -46,7 +46,16 @@ func (w World4) Update() {
 
 func (w World4) Draw() {
 
-	DrawText("There's nothing to do or see here", 0, 0)
-	DrawText("because this is a pure CPU thrash-test.", 0, 16)
+	if drawHelpText {
+		DrawText("There's nothing to do or see here", 0, 0)
+		DrawText("because this is a pure CPU thrash-test.", 0, 16)
+		DrawText("There are 8000 moving objects, resolving", 0, 32)
+		DrawText("in a space full of 1.5 million shapes.", 0, 48)
+	}
 
+}
+
+func (w World4) Destroy() {
+	space.Clear()
+	resolvers = make([]*resolv.Rectangle, 0)
 }

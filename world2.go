@@ -11,7 +11,7 @@ func (w World2) Create() {
 
 	var cell int32 = 16
 
-	space = resolv.NewSpace()
+	space.Clear()
 	space.AddShape(resolv.NewRectangle(0, 0, screenWidth, cell))
 	space.AddShape(resolv.NewRectangle(0, cell, cell, screenHeight-cell))
 	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
@@ -29,6 +29,7 @@ func (w World2) Create() {
 	zone.SetTags("zone")
 	space.AddShape(zone)
 
+	squares = make([]*Bouncer, 0)
 	bouncer := MakeNewBouncer()
 	squares = append(squares, bouncer)
 
@@ -108,7 +109,9 @@ func (w World2) Draw() {
 
 	player := squares[0]
 
-	DrawText("Use the arrow keys to move", 0, 0)
+	if drawHelpText {
+		DrawText("Use the arrow keys to move", 0, 0)
+	}
 
 	touching := "You aren't touching a zone"
 
@@ -140,6 +143,13 @@ func (w World2) Draw() {
 
 	}
 
-	DrawText(touching, 0, 16)
+	if drawHelpText {
+		DrawText(touching, 0, 16)
+	}
 
+}
+
+func (w World2) Destroy() {
+	squares = make([]*Bouncer, 0)
+	space.Clear()
 }

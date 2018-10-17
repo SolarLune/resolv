@@ -16,7 +16,10 @@ var cell int32 = 4
 
 var space resolv.Space
 var renderer *sdl.Renderer
+var window *sdl.Window
 var avgFramerate int
+
+var drawHelpText = true
 
 func main() {
 
@@ -28,11 +31,9 @@ func main() {
 	ttf.Init()
 	defer ttf.Quit()
 
-	var win *sdl.Window
+	window, renderer, _ = sdl.CreateWindowAndRenderer(screenWidth, screenHeight, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
 
-	win, renderer, _ = sdl.CreateWindowAndRenderer(screenWidth, screenHeight, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
-
-	win.SetResizable(true)
+	window.SetResizable(true)
 
 	renderer.SetLogicalSize(screenWidth, screenHeight)
 
@@ -41,7 +42,8 @@ func main() {
 	gfx.SetFramerate(fpsMan, 60)
 
 	// Change this to one of the other World structs to change the world and see different tests
-	world := World1{}
+
+	var world WorldInterface = &World1{}
 
 	world.Create()
 
@@ -63,10 +65,45 @@ func main() {
 
 		keyboard.Update()
 
-		if keyboard.KeyPressed(sdl.K_1) {
+		if keyboard.KeyPressed(sdl.K_F2) {
 			gfx.SetFramerate(fpsMan, 10)
-		} else if keyboard.KeyPressed(sdl.K_2) {
+		} else if keyboard.KeyPressed(sdl.K_F3) {
 			gfx.SetFramerate(fpsMan, 60)
+		}
+
+		if keyboard.KeyPressed(sdl.K_1) {
+			world.Destroy()
+			world = &World1{}
+			world.Create()
+		}
+		if keyboard.KeyPressed(sdl.K_2) {
+			world.Destroy()
+			world = &World2{}
+			world.Create()
+		}
+		if keyboard.KeyPressed(sdl.K_3) {
+			world.Destroy()
+			world = &World3{}
+			world.Create()
+		}
+		if keyboard.KeyPressed(sdl.K_4) {
+			world.Destroy()
+			world = &World4{}
+			world.Create()
+		}
+		if keyboard.KeyPressed(sdl.K_5) {
+			world.Destroy()
+			world = &World5{}
+			world.Create()
+		}
+		if keyboard.KeyPressed(sdl.K_6) {
+			world.Destroy()
+			world = &World6{}
+			world.Create()
+		}
+
+		if keyboard.KeyPressed(sdl.K_F1) {
+			drawHelpText = !drawHelpText
 		}
 
 		if keyboard.KeyPressed(sdl.K_ESCAPE) {

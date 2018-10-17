@@ -9,8 +9,14 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
+type WorldInterface interface {
+	Create()
+	Update()
+	Draw()
+	Destroy()
+}
+
 type World1 struct {
-	DrawInfo bool
 }
 
 type Bouncer struct {
@@ -52,8 +58,6 @@ func MakeNewBouncer() *Bouncer {
 
 func (w *World1) Create() {
 
-	w.DrawInfo = true
-
 	squares = make([]*Bouncer, 0)
 
 	var screenCellWidth = screenWidth / cell
@@ -62,7 +66,7 @@ func (w *World1) Create() {
 	// Just so nobody gets confused, yes, this isn't "true" fidelity because while I'm using floats for the speed variables,
 	// I'm putting them into ints in the rectangle rather than having extra X and Y variables (just to make it easier to follow).
 
-	space = resolv.NewSpace()
+	space.Clear()
 	space.AddShape(resolv.NewRectangle(0, 0, screenWidth, cell))
 	space.AddShape(resolv.NewRectangle(0, cell, cell, screenHeight-cell))
 	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
@@ -151,10 +155,6 @@ func (w *World1) Update() {
 
 	}
 
-	if keyboard.KeyPressed(sdl.K_F1) {
-		w.DrawInfo = !w.DrawInfo
-	}
-
 }
 
 func (w World1) Draw() {
@@ -186,12 +186,19 @@ func (w World1) Draw() {
 
 	}
 
-	if w.DrawInfo {
+	if drawHelpText {
 		DrawText("Press Up to spawn bouncers", 32, 16)
 		DrawText("Press Down to remove bouncers", 32, 32)
 		DrawText("Press 'R' to restart with a new", 32, 48)
 		DrawText("layout", 32, 64)
-		DrawText(strconv.Itoa(len(squares))+" bouncers in the world", 32, 80)
-		DrawText("Press F1 to turn on or off this text", 32, 96)
+		DrawText("Use the number keys to jump to", 32, 80)
+		DrawText("different worlds", 32, 96)
+		DrawText(strconv.Itoa(len(squares))+" bouncers in the world", 32, 112)
+		DrawText("Press F1 to turn on or off this text", 32, 128)
 	}
+}
+
+func (w World1) Destroy() {
+	squares = make([]*Bouncer, 0)
+	space.Clear()
 }

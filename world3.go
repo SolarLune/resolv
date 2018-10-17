@@ -17,7 +17,7 @@ func (w World3) Create() {
 
 	var cell int32 = 16
 
-	space = resolv.NewSpace()
+	space.Clear()
 	space.AddShape(resolv.NewRectangle(0, 0, screenWidth, cell))
 	space.AddShape(resolv.NewRectangle(0, cell, cell, screenHeight-cell))
 	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
@@ -149,6 +149,18 @@ func (world World3) Draw() {
 
 	}
 
-	DrawText(touching, 0, 0)
+	if drawHelpText {
+		DrawText(touching, 0, 0)
+	}
 
+}
+
+func (w World3) Destroy() {
+	squares = make([]*Bouncer, 0)
+
+	secondCircleZone = nil
+
+	mainCircle = nil
+
+	space.Clear()
 }

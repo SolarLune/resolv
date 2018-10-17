@@ -252,17 +252,19 @@ func (b *basicShape) SetXY(x, y int32) {
 	b.Y = y
 }
 
-// Collision describes the collision found when a Shape attempted to resolve a movement into another Shape, or in the same Space as
-// other existing Shapes.
+// Collision describes the collision found when a Shape attempted to resolve a movement into another Shape, or in the
+// same Space as other existing Shapes.
+// ResolveX and ResolveY represent the displacement of the Shape to the point of collision. How far along the Shape
+// got when attempting to move along the direction given by deltaX and deltaY in the Resolve() function before
+// touching another Shape.
+// Teleporting is if moving according to ResolveX and ResolveY might be considered teleporting, which is moving
+// greater than the deltaX or deltaY provided to the Resolve function * 1.5 (this is arbitrary, but can be useful
+// when attempting to see if a movement would be ).
+// OtherShape should be a pointer to the Shape that the colliding object collided with, if the Collision was successful.
 type Collision struct {
 	ResolveX, ResolveY int32
-	// ResolveX and ResolveY represent the displacement of the Shape to the point of collision. How far along the Shape got when
-	// attempting to move along the direction given by deltaX and deltaY in the Resolve() function before touching another Shape.
-	Teleporting bool
-	// Teleporting is if moving according to ResolveX and ResolveY might be considered teleporting, which is moving greater than the
-	// X or deltaY provided to the Resolve function * 1.5 (this is arbitrary, but can be useful).
-	OtherShape Shape
-	// OtherShape should be a pointer to the Shape that the colliding object collided with.
+	Teleporting        bool
+	OtherShape         Shape
 }
 
 // Colliding returns whether the Collision actually was valid because of a collision against another Shape.
@@ -270,9 +272,9 @@ func (c Collision) Colliding() bool {
 	return c.OtherShape != nil
 }
 
-// Resolve attempts to move the checking Shape with the specified X and Y values, returning a Collision object if it collides with
-// the specified other Shape. The deltaX and deltaY arguments are the movement displacement in pixels. For most situations, you
-// would want to resolve on the X and Y axes separately.
+// Resolve attempts to move the checking Shape with the specified X and Y values, returning a Collision object
+// if it collides with the specified other Shape. The deltaX and deltaY arguments are the movement displacement
+// in pixels. For platformers in particular, you would probably want to resolve on the X and Y axes separately.
 func Resolve(firstShape Shape, other Shape, deltaX, deltaY int32) Collision {
 
 	out := Collision{}
@@ -336,7 +338,6 @@ func Resolve(firstShape Shape, other Shape, deltaX, deltaY int32) Collision {
 
 			out.ResolveX = int32(x)
 			out.ResolveY = int32(y)
-
 			out.OtherShape = other
 
 		} else {
@@ -368,7 +369,8 @@ func NewRectangle(x, y, w, h int32) *Rectangle {
 	return r
 }
 
-// IsColliding returns whether the Rectangle is colliding with the specified other Shape or not.
+// IsColliding returns whether the Rectangle is colliding with the specified other Shape or not, including the other Shape
+// being wholly contained within the Rectangle.
 func (r *Rectangle) IsColliding(other Shape) bool {
 
 	if !r.Collideable || !other.IsCollideable() {
@@ -385,6 +387,12 @@ func (r *Rectangle) IsColliding(other Shape) bool {
 
 	if ok {
 		return c.IsColliding(r)
+	}
+
+	l, ok := other.(*Line)
+
+	if ok {
+		return l.IsColliding(r)
 	}
 
 	fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against a Rectangle ", r, "!")
@@ -433,7 +441,8 @@ func NewCircle(x, y, radius int32) *Circle {
 	return c
 }
 
-// IsColliding returns true if the Circle is colliding with the specified other Shape.
+// IsColliding returns true if the Circle is colliding with the specified other Shape, including the other Shape
+// being wholly within the Circle.
 func (c *Circle) IsColliding(other Shape) bool {
 
 	if !c.Collideable || !other.IsCollideable() {
@@ -471,6 +480,12 @@ func (c *Circle) IsColliding(other Shape) bool {
 
 	}
 
+	l, ok := other.(*Line)
+
+	if ok {
+		return l.IsColliding(r)
+	}
+
 	fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Circle ", c, "!")
 
 	return false
@@ -506,4 +521,122 @@ func Distance(x, y, x2, y2 int32) int32 {
 	ds := (dx * dx) + (dy * dy)
 	return int32(math.Sqrt(math.Abs(float64(ds))))
 
+}
+
+// Line represents a line, from one point to another.
+type Line struct {
+	basicShape
+	X2, Y2 int32
+}
+
+// NewLine returns a new Line instance.
+func NewLine(x, y, x2, y2 int32) *Line {
+	l := &Line{}
+	l.X = x
+	l.Y = y
+	l.X2 = x2
+	l.Y2 = y2
+	l.Collideable = true
+	return l
+}
+
+// IsColliding returns if the Line is colliding with the other Shape. Currently, Circle-Line collision is missing.
+func (l *Line) IsColliding(other Shape) bool {
+
+	if !l.Collideable || !other.IsCollideable() {
+		return false
+	}
+
+	b, ok := other.(*Line)
+
+	if ok {
+
+		det := (l.X2-l.X)*(b.Y2-b.Y) - (b.X2-b.X)*(l.Y2-l.Y)
+
+		if det == 0 {
+			return false
+		}
+
+		// MAGIC MATH
+
+		lambda := float32(((l.Y-b.Y)*(b.X2-b.X))-((l.X-b.X)*(b.Y2-b.Y))) / float32(det)
+
+		gamma := float32(((l.Y-b.Y)*(l.X2-l.X))-((l.X-b.X)*(l.Y2-l.Y))) / float32(det)
+
+		// TO-DO: Fix this so if a line "connects" with another along the same exact slope, it returns as intersecting
+
+		return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)
+
+	}
+
+	r, ok := other.(*Rectangle)
+
+	if ok {
+
+		side := NewLine(r.X, r.Y, r.X, r.Y+r.H)
+		if l.IsColliding(side) {
+			return true
+		}
+
+		side.Y = r.Y + r.H
+		side.X2 = r.X + r.W
+		side.Y2 = r.Y + r.H
+		if l.IsColliding(side) {
+			return true
+		}
+
+		side.X = r.X + r.W
+		side.Y2 = r.Y
+		if l.IsColliding(side) {
+			return true
+		}
+
+		side.Y = r.Y
+		side.X2 = r.X
+		side.Y2 = r.Y
+		if l.IsColliding(side) {
+			return true
+		}
+
+		return (l.X >= r.X && l.Y >= r.Y && l.X < r.X+r.W && l.Y < r.Y+r.H) || (l.X2 >= r.X && l.Y2 >= r.Y && l.X2 < r.X+r.W && l.Y2 < r.Y+r.H)
+
+	}
+
+	// c, ok := other.(*Circle)
+
+	// if ok {
+
+	//	TO-DO: Add this later, because this is kinda hard and would necessitate some complex vector math that, for whatever
+	//  reason, is not even readily available in a Golang library as far as I can tell???
+
+	// }
+
+	// fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Line ", l, "!")
+
+	return false
+
+}
+
+// WouldBeColliding returns if the Line would be colliding if it were moved by the designated delta X and Y values.
+func (l *Line) WouldBeColliding(other Shape, dx, dy int32) bool {
+	l.X += dx
+	l.Y += dy
+	l.X2 += dx
+	l.Y2 += dy
+	isColliding := l.IsColliding(other)
+	l.X -= dx
+	l.Y -= dy
+	l.X2 -= dx
+	l.Y2 -= dy
+	return isColliding
+}
+
+// SetXY sets the position of the Line, also moving the end point of the line (so it wholly displaces the line).
+func (l *Line) SetXY(x, y int32) {
+	dx := x - l.X
+	dy := y - l.Y
+	l.X = x
+	l.Y = y
+	l.X2 += dx
+	l.Y2 += dy
 }
