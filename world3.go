@@ -150,7 +150,8 @@ func (world World3) Draw() {
 	}
 
 	if drawHelpText {
-		DrawText(touching, 0, 0)
+		DrawText(0, 0, "Circle collision testing",
+			touching)
 	}
 
 }

@@ -23,6 +23,21 @@ func (w *World5) Create() {
 	rect := resolv.NewRectangle(160, 16, 32, 32)
 	space.AddShape(rect)
 
+	var lx, ly int32 = 160, 160
+	var ls int32 = 16
+
+	line := resolv.NewLine(lx, ly, lx+ls, ly)
+	space.AddShape(line)
+
+	line = resolv.NewLine(lx+ls, ly, lx+ls, ly+ls)
+	space.AddShape(line)
+
+	line = resolv.NewLine(lx+ls, ly+ls, lx, ly+ls)
+	space.AddShape(line)
+
+	line = resolv.NewLine(lx, ly+ls, lx, ly)
+	space.AddShape(line)
+
 }
 
 func (w *World5) Update() {
@@ -80,11 +95,16 @@ func (w *World5) Draw() {
 	}
 
 	if drawHelpText {
-		DrawText("Click to place the line's start", 0, 0)
-		DrawText("Move the mouse to place the end point", 0, 16)
-		DrawText("The line turns red when it touches", 0, 32)
-		DrawText("something", 0, 48)
-		DrawText("Press F1 to hide this text", 0, 64)
+		DrawText(0, 0, "Line collision test",
+			"Click to place the line's start",
+			"Move the mouse to place the end point",
+			"The line turns red when it touches",
+			"something",
+			"Press F1 to hide this text")
+
+		DrawText(80, 160, "This square is made out of",
+			"individual lines; the inside is",
+			"''hollow''")
 	}
 
 }

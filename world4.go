@@ -47,10 +47,12 @@ func (w World4) Update() {
 func (w World4) Draw() {
 
 	if drawHelpText {
-		DrawText("There's nothing to do or see here", 0, 0)
-		DrawText("because this is a pure CPU thrash-test.", 0, 16)
-		DrawText("There are 8000 moving objects, resolving", 0, 32)
-		DrawText("in a space full of 1.5 million shapes.", 0, 48)
+		DrawText(0, 0,
+			"Pure CPU Thrash-test",
+			"There's nothing to do or see here",
+			"There are 8000 moving objects, resolving",
+			"in a space full of 1.5 million shapes",
+			"The FPS is at the top-right")
 	}
 
 }

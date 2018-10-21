@@ -101,6 +101,11 @@ func main() {
 			world = &World6{}
 			world.Create()
 		}
+		if keyboard.KeyPressed(sdl.K_7) {
+			world.Destroy()
+			world = &World7{}
+			world.Create()
+		}
 
 		if keyboard.KeyPressed(sdl.K_F1) {
 			drawHelpText = !drawHelpText
@@ -133,7 +138,7 @@ func main() {
 
 		frameCount++
 
-		DrawText(strconv.Itoa(avgFramerate), screenWidth-32, 0)
+		DrawText(screenWidth-32, 0, strconv.Itoa(avgFramerate))
 
 		renderer.Present()
 
@@ -141,21 +146,29 @@ func main() {
 
 }
 
-func DrawText(text string, x, y int32) {
+func DrawText(x, y int32, textLines ...string) {
 
-	font, _ := ttf.OpenFont("ARCADEPI.TTF", 12)
-	defer font.Close()
+	sy := y
 
-	var surf *sdl.Surface
+	for _, text := range textLines {
 
-	surf, _ = font.RenderUTF8Solid(text, sdl.Color{R: 255, G: 255, B: 255, A: 255})
+		font, _ := ttf.OpenFont("ARCADEPI.TTF", 12)
+		defer font.Close()
 
-	textSurface, _ := renderer.CreateTextureFromSurface(surf)
-	defer textSurface.Destroy()
+		var surf *sdl.Surface
 
-	_, _, w, h, _ := textSurface.Query()
+		surf, _ = font.RenderUTF8Solid(text, sdl.Color{R: 255, G: 255, B: 255, A: 255})
 
-	textSurface.SetAlphaMod(100)
-	renderer.Copy(textSurface, &sdl.Rect{X: 0, Y: 0, W: w, H: h}, &sdl.Rect{X: x, Y: y, W: w, H: h})
+		textSurface, _ := renderer.CreateTextureFromSurface(surf)
+		defer textSurface.Destroy()
+
+		_, _, w, h, _ := textSurface.Query()
+
+		textSurface.SetAlphaMod(100)
+		renderer.Copy(textSurface, &sdl.Rect{X: 0, Y: 0, W: w, H: h}, &sdl.Rect{X: x, Y: sy, W: w, H: h})
+
+		sy += 16
+
+	}
 
 }

@@ -72,7 +72,7 @@ func (w *World1) Create() {
 	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
 	space.AddShape(resolv.NewRectangle(cell, screenHeight-cell, screenWidth-(cell*2), cell))
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		x := rand.Int31n(screenCellWidth - 2)
 		y := rand.Int31n(screenCellHeight - 2)
 		space.AddShape(resolv.NewRectangle(cell+(x*cell), cell+(y*cell), cell*(1+rand.Int31n(16)), cell*(1+rand.Int31n(16))))
@@ -187,14 +187,16 @@ func (w World1) Draw() {
 	}
 
 	if drawHelpText {
-		DrawText("Press Up to spawn bouncers", 32, 16)
-		DrawText("Press Down to remove bouncers", 32, 32)
-		DrawText("Press 'R' to restart with a new", 32, 48)
-		DrawText("layout", 32, 64)
-		DrawText("Use the number keys to jump to", 32, 80)
-		DrawText("different worlds", 32, 96)
-		DrawText(strconv.Itoa(len(squares))+" bouncers in the world", 32, 112)
-		DrawText("Press F1 to turn on or off this text", 32, 128)
+		DrawText(32, 16,
+			"Bouncer stress test",
+			"Press Up to spawn bouncers",
+			"Press Down to remove bouncers",
+			"Press 'R' to restart with a new",
+			"layout",
+			"Use the number keys to jump to",
+			"different worlds",
+			strconv.Itoa(len(squares))+" bouncers in the world",
+			"Press F1 to turn on or off this text")
 	}
 }
 

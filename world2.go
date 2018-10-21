@@ -109,10 +109,6 @@ func (w World2) Draw() {
 
 	player := squares[0]
 
-	if drawHelpText {
-		DrawText("Use the arrow keys to move", 0, 0)
-	}
-
 	touching := "You aren't touching a zone"
 
 	for _, shape := range space {
@@ -144,7 +140,10 @@ func (w World2) Draw() {
 	}
 
 	if drawHelpText {
-		DrawText(touching, 0, 16)
+		DrawText(0, 0,
+			"Zone collision test",
+			"Use the arrow keys to move",
+			touching)
 	}
 
 }

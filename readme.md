@@ -101,29 +101,28 @@ var playerRect *resolv.Rectangle
 
 func Init() {
 
-    // Create a space.
+    // Create a space for Shapes to occupy.
     space = resolv.NewSpace()
 
     // Create one rectangle - we'll say this one represents our player.
     playerRect = resolv.NewRectangle(40, 40, 16, 16)
 
-    // Note that we don't have to add the Player Rectangle to the space; this is only if we want it to also be checked
-    // for collision testing and resolution within the Space.
+    // Note that we don't have to add the Player Rectangle to the Space; this is only if we want it 
+    // to also be checked for collision testing and resolution within the Space by other Shapes.
     space.AddShape(playerRect)
 
-    // Create some more Rectangles to represent level bounds.
+    // Now we're going to create some more Rectangles to represent level bounds.
     s := resolv.NewRectangle(0, 0, 16, 240)
 
-    // We set tags on the Rectangles to allow us to more easily check for collisions by specific "type".
+    // We set tags on the Rectangles to allow us to more easily check for collisions.
     s.SetTags("solid")
     
     // Then we add the Shape to the Space.
     space.AddShape(s)
 
-    // Note that this is a bit verbose - in reality, you'd probably be loading the necessary data to construct the Shapes
-    // by looping through a for loop, reading data in from a level format, like Tiled's TMX format. Then you'd just do it once in
-    // the for loop to have it be done for each Shape you need to represent your level geometry, rather than hand-coding the shapes
-    // like this. Anyway...
+    /* Note that this is a bit verbose - in reality, you'd probably be loading the necessary data 
+    to construct the Shapes by looping through a for-loop when reading data in from a level format,
+    like Tiled's TMX format. Anyway...*/
 
     s = resolv.NewRectangle(16, 0, 320, 16)
     s.SetTags("solid")
@@ -141,23 +140,27 @@ func Init() {
 
 func Update() {
 
-    // This time, we want to see if we're going to collide with something solid when moving down-right by 4 pixels on each axis.
+    // This time, we want to see if we're going to collide with something solid when 
+    // moving down-right by 4 pixels on each axis.
 
     dx := 4
     dy := 4
 
-    // To check for Shapes with a specific tag, we can filter out the Space they exist in with either the Space.FilterByTags() 
-    // or Space.Filter functions. Space.Filter() allows us to provide a function to filter out the Shapes; Space.FilterByTags() 
-    // takes the tag names themselves to filter out the Shapes by. 
+    /* To check for Shapes with a specific tag, we can filter out the Space they exist 
+    in with either the Space.FilterByTags() or Space.Filter functions. Space.Filter() 
+    allows us to provide a function to filter out the Shapes; Space.FilterByTags() 
+    takes the tag names themselves to filter out the Shapes by. */
 
     // This gives us just the Shapes with the "solid" tag.
     solids := space.FilterByTags("solid")
 
-    // You can provide more tags in the same function, as well. (i.e. others := space.FilterByTags("solid", "danger", "zone"))
+    // You can provide more tags in the same function, as well. (i.e. 
+    // others := space.FilterByTags("solid", "danger", "zone"))
 
-    // Now we check each axis individually. This is done to allow a collision on one axis to not stop movement on the other
-    // as necessary. Note that Space.Resolve() takes the checking Shape as the first argument, and returns the first collision 
-    // that it comes into contact with.
+    /* Now we check each axis individually. This is done to allow a collision on one 
+    axis to not stop movement on the other as necessary. Note that Space.Resolve() 
+    takes the checking Shape as the first argument, and returns the first collision 
+    that it comes into contact with.*/
 
     collision := solids.Resolve(playerRect, dx, 0)
 
@@ -181,13 +184,60 @@ func Update() {
 
 ```
 
-Welp, that's about it. If you want to see more info, feel free to examine the main.go and world.go tests to see how a couple of quick example tests are set up.
+Also note that a Space itself satisfies the requirements for a Shape, so they can be checked against like any other Shape. They work like a composite Shape, where doing collision testing and resolution simply does the equivalent functions for each Shape contained within the Space. This means that you can make complex Shapes out of simple Shapes easily by adding them to a Space, and then using that Space wherever you would use a normal Shape.
+
+```go
+
+var ship *resolv.Space
+var world *resolv.Space
+
+func Init() {
+
+    world = resolv.NewSpace()
+
+    ship = resolv.NewSpace()
+    
+    // Construct the ship!
+    ship.AddShape(
+        resolv.NewRectangle(0, 0, 16, 16), 
+        resolv.NewLine(16, 0, 32, 16), 
+        resolv.NewLine(32, 16, 16, 16))
+
+    world.AddShape(ship)
+
+    // Make something to dodge!
+    bullet := resolv.NewRectangle(64, 16, 2, 2)
+    bullet.SetTags("bullet")
+    world.AddShape(bullet)
+
+}
+
+func Update() {
+
+    /* To make using Spaces as compound Shapes easier, a Space has a Move() 
+    function that moves all Shapes within the Space by the specified 
+    delta X and Y values. */
+
+    ship.Move(2, 0)
+
+    bullets := world.FilterByTags("bullet")
+
+    // Now this line will run if any bullet touches any part of our ship Space.
+    if bullets.IsColliding(ship) {
+        fmt.Println("OW!")
+    }
+
+}
+
+```
+
+Welp, that's about it. If you want to see more info, feel free to examine the main.go and world#.go tests to see how a couple of quick example tests are set up.
 
 [You can check out the GoDoc link here, as well.](https://godoc.org/github.com/SolarLune/resolv/resolv)
 
 ## Dependencies?
 
-For the actual package, there are no external dependencies. resolv just uses the built-in "fmt" and "math" packages. It also exists in just one Go file (currently, anyway), which is also a good thing, I suppose, haha.
+For the actual package, there are no external dependencies. resolv just uses the built-in "fmt" and "math" packages.
 
 For the tests, resolv requires veandco's sdl2 port to create the window, handle input, and draw the shapes.
 

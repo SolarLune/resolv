@@ -1,12 +1,16 @@
 package main
 
 import (
+	"math"
+
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
 type World6 struct {
-	Player *Bouncer
+	Player            *Bouncer
+	FloatingPlatform  *resolv.Line
+	FloatingPlatformY float64
 }
 
 func (w *World6) Create() {
@@ -46,11 +50,11 @@ func (w *World6) Create() {
 
 	space.AddShape(line)
 
-	rect := resolv.NewRectangle(c*7, screenHeight-c-8, c, 8)
+	rect := resolv.NewRectangle(c*7, screenHeight-c-8, c*2, 8)
 	rect.SetTags("solid")
 	space.AddShape(rect)
 
-	line = resolv.NewLine(c*8, screenHeight-c-8, c*10, screenHeight-c)
+	line = resolv.NewLine(c*9, screenHeight-c-8, c*11, screenHeight-c)
 	line.SetTags("ramp")
 	space.AddShape(line)
 
@@ -62,6 +66,11 @@ func (w *World6) Create() {
 	line.SetTags("ramp")
 	space.AddShape(line)
 
+	w.FloatingPlatform = resolv.NewLine(c*8, screenHeight-c*7, c*9, screenHeight-c*6)
+	w.FloatingPlatform.SetTags("ramp")
+	space.AddShape(w.FloatingPlatform)
+	w.FloatingPlatformY = float64(w.FloatingPlatform.Y)
+
 }
 
 func (w *World6) Update() {
@@ -72,6 +81,11 @@ func (w *World6) Update() {
 	accel := 0.5 + friction
 
 	maxSpd := float32(3)
+
+	w.FloatingPlatformY += math.Sin(float64(sdl.GetTicks()/1000)) * .5
+
+	w.FloatingPlatform.Y = int32(w.FloatingPlatformY)
+	w.FloatingPlatform.Y2 = int32(w.FloatingPlatformY) - 16
 
 	if w.Player.SpeedX > friction {
 		w.Player.SpeedX -= friction
@@ -100,7 +114,8 @@ func (w *World6) Update() {
 	// JUMP
 
 	// Check for a collision downwards by just attempting a resolution downwards and seeing if it collides with something.
-	onGround := space.Resolve(w.Player.Rect, 0, 4).Colliding()
+	down := space.Resolve(w.Player.Rect, 0, 4)
+	onGround := down.Colliding()
 
 	if keyboard.KeyPressed(sdl.K_x) && onGround {
 		w.Player.SpeedY = -8
@@ -176,9 +191,11 @@ func (w *World6) Draw() {
 	}
 
 	if drawHelpText {
-		DrawText("Use the arrow keys to move", 0, 0)
-		DrawText("Press X to jump", 0, 16)
-		DrawText("You can jump through lines or ramps", 0, 32)
+		DrawText(0, 0,
+			"Platformer test",
+			"Use the arrow keys to move",
+			"Press X to jump",
+			"You can jump through lines or ramps")
 	}
 
 }
