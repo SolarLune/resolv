@@ -1,6 +1,10 @@
 
 # resolv
 
+![multishapestest2](https://user-images.githubusercontent.com/4733521/47263447-bde77880-d4b6-11e8-8472-b68ffe114bc9.gif)
+
+![smoove](https://user-images.githubusercontent.com/4733521/47263453-bfb13c00-d4b6-11e8-9b3a-6b2c6afa1b6a.gif)
+
 ![resolv_v02 gif](https://user-images.githubusercontent.com/4733521/46297121-c18b7d80-c550-11e8-9854-728e0aa7ab36.gif)
 
 [GoDocs](https://godoc.org/github.com/SolarLune/resolv/resolv)
@@ -184,7 +188,7 @@ func Update() {
 
 ```
 
-Also note that a Space itself satisfies the requirements for a Shape, so they can be checked against like any other Shape. They work like a composite Shape, where doing collision testing and resolution simply does the equivalent functions for each Shape contained within the Space. This means that you can make complex Shapes out of simple Shapes easily by adding them to a Space, and then using that Space wherever you would use a normal Shape.
+Also note that a Space itself satisfies the requirements for a Shape, so they can be checked against like any other Shape. That can work like a composite Shape, where doing collision testing and resolution simply does the equivalent functions for each Shape contained within the Space and bails out early when necessary. This means that you can make complex Shapes out of simple Shapes easily by adding them to a Space, and then using that Space wherever you would use a normal Shape.
 
 ```go
 

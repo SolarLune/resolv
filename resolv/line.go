@@ -22,8 +22,8 @@ func NewLine(x, y, x2, y2 int32) *Line {
 	return l
 }
 
-// BUG(SolarLune): IsColliding() doesn't work with Circles.
-// BUG(SolarLune): IsColliding() fails if testing two lines who intersect along the exact same slope.
+// BUG(SolarLune): Line.IsColliding() doesn't work with Circles.
+// BUG(SolarLune): Line.IsColliding() fails if testing two lines who intersect along the exact same slope.
 
 // IsColliding returns if the Line is colliding with the other Shape. Currently, Circle-Line collision is missing.
 func (l *Line) IsColliding(other Shape) bool {

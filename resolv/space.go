@@ -2,11 +2,12 @@ package resolv
 
 import "fmt"
 
-// Space represents a collection that holds Shapes for collision detection in the same common space. A Space is arbitrarily large -
-// you can use one Space for a single level, room, or area in your game, or split it up if it makes more sense for your game design.
-// Technically, a Space is just a slice of Shapes. Spaces fulfill the required functions for Shapes, which means you can also use them
-// as compound shapes themselves. In these cases, the first object is the "root", in a sense. See the Shape functions defined on the
-// Space to get more information.
+/*A Space represents a collection that holds Shapes for collision detection in the same common space. A Space is arbitrarily large -
+you can use one Space for a single level, room, or area in your game, or split it up if it makes more sense for your game design.
+Technically, a Space is just a slice of Shapes. Spaces fulfill the required functions for Shapes, which means you can also use them
+as compound shapes themselves. In these cases, the first Shape is the "root" or pivot from which attempts to move the Shape will
+be focused. In other words, Space.SetXY(40, 40) will move all Shapes in the Space in such a way that the first Shape will be at
+40, 40, and all other Shapes retain their original spacing relative to it.*/
 type Space []Shape
 
 // NewSpace creates a new Space for shapes to exist in and be tested against in.
@@ -256,7 +257,7 @@ func (sp *Space) GetXY() (int32, int32) {
 
 // SetXY sets the X and Y position of all Shapes within the Space to the position provided using the first Shape's position as
 // reference. Basically, it moves the first Shape within the Space to the target location and then moves all other Shapes
-// by the same movement value.
+// by the same delta movement.
 func (sp *Space) SetXY(x, y int32) {
 
 	if len(*sp) > 0 {
@@ -266,10 +267,7 @@ func (sp *Space) SetXY(x, y int32) {
 		dy = y - dy
 
 		for _, shape := range *sp {
-			sx, sy := shape.GetXY()
-			sx += dx
-			sy += dy
-			shape.SetXY(sx, sy)
+			shape.Move(dx, dy)
 		}
 
 	}
