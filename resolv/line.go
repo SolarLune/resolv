@@ -151,6 +151,22 @@ func (l *Line) Center() (int32, int32) {
 
 }
 
+// GetLength returns the length of the Line.
+func (l *Line) GetLength() int32 {
+	return Distance(l.X, l.Y, l.X2, l.Y2)
+}
+
+// SetLength sets the length of the Line to the value provided.
+func (l *Line) SetLength(length int32) {
+
+	ln := l.GetLength()
+	xd := int32(float32(l.X2-l.X) / float32(ln) * float32(length))
+	yd := int32(float32(l.Y2-l.Y) / float32(ln) * float32(length))
+
+	l.X2 = l.X + xd
+	l.Y2 = l.Y + yd
+}
+
 // GetBoundingRectangle returns a rectangle centered on the center point of the Line that would fully contain the Line.
 func (l *Line) GetBoundingRectangle() *Rectangle {
 
