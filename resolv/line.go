@@ -204,3 +204,10 @@ func (l *Line) GetBoundingCircle() *Circle {
 	return NewCircle(x, y, radius/2)
 
 }
+
+// GetDelta returns the delta (or difference) between the start and end point of a Line.
+func (l *Line) GetDelta() (int32, int32) {
+	dx := l.X2 - l.X
+	dy := l.Y2 - l.Y
+	return dx, dy
+}
