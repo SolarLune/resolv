@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strconv"
+
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -72,6 +74,12 @@ func (w *World5) Draw() {
 
 			if line == w.TargetLine {
 				if space.IsColliding(line) {
+					for i, point := range line.IntersectionPoints(space.GetCollidingShapes(line)) {
+						renderer.SetDrawColor(255, 0, 255, 255)
+						renderer.DrawLine(point.X-5, point.Y, point.X+5, point.Y)
+						renderer.DrawLine(point.X, point.Y-5, point.X, point.Y+5)
+						DrawText(point.X, point.Y, "Intersection #"+strconv.Itoa(i+1))
+					}
 					renderer.SetDrawColor(255, 0, 0, 255)
 				} else {
 					renderer.SetDrawColor(0, 255, 0, 255)

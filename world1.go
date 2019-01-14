@@ -134,7 +134,7 @@ func (w *World1) Update() {
 
 	if keyboard.KeyDown(sdl.K_DOWN) {
 
-		bouncers := space.FilterByTags("bouncer")
+		bouncers := *space.FilterByTags("bouncer")
 
 		if len(bouncers) > 0 {
 

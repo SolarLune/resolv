@@ -73,14 +73,14 @@ func (sp *Space) IsColliding(shape Shape) bool {
 }
 
 // GetCollidingShapes returns a Space comprised of Shapes that collide with the checking Shape.
-func (sp *Space) GetCollidingShapes(shape Shape) Space {
+func (sp *Space) GetCollidingShapes(shape Shape) *Space {
 
-	newSpace := Space{}
+	newSpace := NewSpace()
 
 	for _, other := range *sp {
 		if other != shape {
 			if shape.IsColliding(other) {
-				newSpace = append(newSpace, other)
+				newSpace.AddShape(other)
 			}
 		}
 	}
@@ -113,8 +113,8 @@ func (sp *Space) Resolve(checkingShape Shape, deltaX, deltaY int32) Collision {
 // Filter filters out a Space, returning a new Space comprised of Shapes that return true for the boolean function you provide.
 // This can be used to focus on a set of object for collision testing or resolution, or lower the number of Shapes to test
 // by filtering some out beforehand.
-func (sp *Space) Filter(filterFunc func(Shape) bool) Space {
-	subSpace := make(Space, 0)
+func (sp *Space) Filter(filterFunc func(Shape) bool) *Space {
+	subSpace := NewSpace()
 	for _, shape := range *sp {
 		if filterFunc(shape) {
 			subSpace.AddShape(shape)
@@ -124,7 +124,7 @@ func (sp *Space) Filter(filterFunc func(Shape) bool) Space {
 }
 
 // FilterByTags filters a Space out, creating a new Space that has just the Shapes that have all of the specified tags.
-func (sp *Space) FilterByTags(tags ...string) Space {
+func (sp *Space) FilterByTags(tags ...string) *Space {
 	return sp.Filter(func(s Shape) bool {
 		if s.HasTags(tags...) {
 			return true
@@ -277,10 +277,7 @@ func (sp *Space) SetXY(x, y int32) {
 // Move moves all Shapes in the Space by the displacement provided.
 func (sp *Space) Move(dx, dy int32) {
 	for _, shape := range *sp {
-		x, y := shape.GetXY()
-		x += dx
-		y += dy
-		shape.SetXY(x, y)
+		shape.Move(dx, dy)
 	}
 }
 

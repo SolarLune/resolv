@@ -1,8 +1,8 @@
 package resolv
 
 import (
-	"fmt"
 	"math"
+	"sort"
 )
 
 // Line represents a line, from one point to another.
@@ -22,14 +22,40 @@ func NewLine(x, y, x2, y2 int32) *Line {
 	return l
 }
 
-// BUG(SolarLune): Line.IsColliding() doesn't work with Circles.
-// BUG(SolarLune): Line.IsColliding() fails if testing two lines who intersect along the exact same slope.
+// BUG(SolarLune): Line.IsColliding() and Line.IntersectionPoints() doesn't work with Circles.
+// BUG(SolarLune): Line.IsColliding() and Line.IntersectionPoints() fail if testing two lines that intersect along the exact same slope.
 
 // IsColliding returns if the Line is colliding with the other Shape. Currently, Circle-Line collision is missing.
 func (l *Line) IsColliding(other Shape) bool {
 
+	intersectionPoints := l.IntersectionPoints(other)
+
+	colliding := len(intersectionPoints) > 0
+
+	r, ok := other.(*Rectangle)
+	if ok && !colliding {
+		return (l.X >= r.X && l.Y >= r.Y && l.X < r.X+r.W && l.Y < r.Y+r.H) || (l.X2 >= r.X && l.Y2 >= r.Y && l.X2 < r.X+r.W && l.Y2 < r.Y+r.H)
+	}
+
+	return colliding
+
+}
+
+// IntersectionPoint represents a point of intersection from a Line with another Shape.
+type IntersectionPoint struct {
+	X, Y  int32
+	Shape Shape
+}
+
+// IntersectionPoints returns the intersection points of a Line with another Shape as an array of arrays, composed of X and Y position int32s.
+// The returned list of intersection points are always sorted in order of distance from the start of the casting Line to the end.
+// Currently, Circle-Line collision is missing.
+func (l *Line) IntersectionPoints(other Shape) []IntersectionPoint {
+
+	intersections := []IntersectionPoint{}
+
 	if !l.Collideable || !other.IsCollideable() {
-		return false
+		return intersections
 	}
 
 	b, ok := other.(*Line)
@@ -38,18 +64,21 @@ func (l *Line) IsColliding(other Shape) bool {
 
 		det := (l.X2-l.X)*(b.Y2-b.Y) - (b.X2-b.X)*(l.Y2-l.Y)
 
-		if det == 0 {
-			return false
+		if det != 0 {
+
+			// MAGIC MATH; the extra + 1 here makes it so that corner cases (literally aiming the line through the corners of the
+			// hollow square in world5) works!
+
+			lambda := (float32(((l.Y-b.Y)*(b.X2-b.X))-((l.X-b.X)*(b.Y2-b.Y))) + 1) / float32(det)
+
+			gamma := (float32(((l.Y-b.Y)*(l.X2-l.X))-((l.X-b.X)*(l.Y2-l.Y))) + 1) / float32(det)
+
+			if (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1) {
+				dx, dy := l.GetDelta()
+				intersections = append(intersections, IntersectionPoint{l.X + int32(lambda*float32(dx)), l.Y + int32(lambda*float32(dy)), other})
+			}
+
 		}
-
-		// MAGIC MATH; the extra + 1 here makes it so that corner cases (literally aiming the line through the corners of the
-		// hollow square in world5) works!
-
-		lambda := (float32(((l.Y-b.Y)*(b.X2-b.X))-((l.X-b.X)*(b.Y2-b.Y))) + 1) / float32(det)
-
-		gamma := (float32(((l.Y-b.Y)*(l.X2-l.X))-((l.X-b.X)*(l.Y2-l.Y))) + 1) / float32(det)
-
-		return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1)
 
 	}
 
@@ -58,31 +87,21 @@ func (l *Line) IsColliding(other Shape) bool {
 	if ok {
 
 		side := NewLine(r.X, r.Y, r.X, r.Y+r.H)
-		if l.IsColliding(side) {
-			return true
-		}
+		intersections = append(intersections, l.IntersectionPoints(side)...)
 
 		side.Y = r.Y + r.H
 		side.X2 = r.X + r.W
 		side.Y2 = r.Y + r.H
-		if l.IsColliding(side) {
-			return true
-		}
+		intersections = append(intersections, l.IntersectionPoints(side)...)
 
 		side.X = r.X + r.W
 		side.Y2 = r.Y
-		if l.IsColliding(side) {
-			return true
-		}
+		intersections = append(intersections, l.IntersectionPoints(side)...)
 
 		side.Y = r.Y
 		side.X2 = r.X
 		side.Y2 = r.Y
-		if l.IsColliding(side) {
-			return true
-		}
-
-		return (l.X >= r.X && l.Y >= r.Y && l.X < r.X+r.W && l.Y < r.Y+r.H) || (l.X2 >= r.X && l.Y2 >= r.Y && l.X2 < r.X+r.W && l.Y2 < r.Y+r.H)
+		intersections = append(intersections, l.IntersectionPoints(side)...)
 
 	}
 
@@ -90,7 +109,7 @@ func (l *Line) IsColliding(other Shape) bool {
 
 	if ok {
 
-		return false
+		// return false
 
 		// 	TO-DO: Add this later, because this is kinda hard and would necessitate some complex vector math that, for whatever
 		//  reason, is not even readily available in a Golang library as far as I can tell???
@@ -100,12 +119,18 @@ func (l *Line) IsColliding(other Shape) bool {
 	sp, ok := other.(*Space)
 
 	if ok {
-		return sp.IsColliding(l)
+		for _, shape := range *sp {
+			intersections = append(intersections, l.IntersectionPoints(shape)...)
+		}
 	}
 
-	fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Line ", l, "!")
+	// fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Line ", l, "!")
 
-	return false
+	sort.Slice(intersections, func(i, j int) bool {
+		return Distance(l.X, l.Y, intersections[i].X, intersections[i].Y) < Distance(l.X, l.Y, intersections[j].X, intersections[j].Y)
+	})
+
+	return intersections
 
 }
 
