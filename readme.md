@@ -1,6 +1,8 @@
 
 # resolv
 
+![intersectiontests](https://user-images.githubusercontent.com/4733521/51143628-ce806400-1803-11e9-93b0-2c7a3a78f282.gif)
+
 ![multishapestest2](https://user-images.githubusercontent.com/4733521/47263447-bde77880-d4b6-11e8-8472-b68ffe114bc9.gif)
 
 ![smoove](https://user-images.githubusercontent.com/4733521/47263453-bfb13c00-d4b6-11e8-9b3a-6b2c6afa1b6a.gif)
@@ -92,7 +94,7 @@ This is fine for simple testing, but if you have even a slightly more complex ga
 
 A Space represents a container for Shapes to exist in and test against. This way, the fundamentals are the same, but it should scale up more easily, since you don't have to do manual for checking everywhere you want to test a Shape against others. 
 
-A Space is just a Slice of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces being simple slices means that they can also be filtered out as necessary to easily test a smaller selection of Shapes when desired.
+A Space is just a pointer to a slice of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces being pointers to slices means that they can also be filtered out as necessary to easily test a smaller selection of Shapes when desired.
 
 Here's an example using a Space to check one Shape against others:
 
@@ -161,7 +163,8 @@ func Update() {
     // You can provide more tags in the same function, as well. (i.e. 
     // others := space.FilterByTags("solid", "danger", "zone"))
 
-    /* Now we check each axis individually. This is done to allow a collision on one 
+    /* Now we check each axis individually against the Space (or, in other words, against
+    all Shapes conatined within the Space). This is done to allow a collision on one 
     axis to not stop movement on the other as necessary. Note that Space.Resolve() 
     takes the checking Shape as the first argument, and returns the first collision 
     that it comes into contact with.*/
@@ -188,7 +191,7 @@ func Update() {
 
 ```
 
-Also note that a Space itself satisfies the requirements for a Shape, so they can be checked against like any other Shape. That can work like a composite Shape, where doing collision testing and resolution simply does the equivalent functions for each Shape contained within the Space and bails out early when necessary. This means that you can make complex Shapes out of simple Shapes easily by adding them to a Space, and then using that Space wherever you would use a normal Shape.
+Also note that a Space itself satisfies the requirements for a Shape, so they can be checked against like any other Shape. This works like a complex Shape composed of smaller Shapes, where doing collision testing and resolution simply does the equivalent functions for each Shape contained within the Space. This means that you can make complex Shapes out of simple Shapes easily by adding them to a Space, and then using that Space wherever you would use a normal Shape.
 
 ```go
 
@@ -207,6 +210,7 @@ func Init() {
         resolv.NewLine(16, 0, 32, 16), 
         resolv.NewLine(32, 16, 16, 16))
 
+    // Add the Ship to the game world!
     world.AddShape(ship)
 
     // Make something to dodge!
@@ -218,9 +222,9 @@ func Init() {
 
 func Update() {
 
-    /* To make using Spaces as compound Shapes easier, a Space has a Move() 
-    function that moves all Shapes within the Space by the specified 
-    delta X and Y values. */
+    /* To make using Spaces as compound Shapes easier, you can use the Space's Move() 
+    function to move all Shapes contained within the Space by the specified delta
+    X and Y values. */
 
     ship.Move(2, 0)
 

@@ -40,8 +40,6 @@ func (w *World5) Create() {
 	line = resolv.NewLine(lx, ly+ls, lx, ly)
 	space.AddShape(line)
 
-	space.AddShape(space)
-
 }
 
 func (w *World5) Update() {
