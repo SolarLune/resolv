@@ -36,7 +36,7 @@ func (w *World6) Create() {
 
 	space.AddShape(resolv.NewRectangle(c*4, screenHeight-c*4, c*3, c))
 
-	for _, shape := range space {
+	for _, shape := range *space {
 		shape.SetTags("solid")
 	}
 
@@ -164,7 +164,7 @@ func (w *World6) Update() {
 
 func (w *World6) Draw() {
 
-	for _, shape := range space {
+	for _, shape := range *space {
 
 		rect, ok := shape.(*resolv.Rectangle)
 

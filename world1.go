@@ -78,7 +78,7 @@ func (w *World1) Create() {
 		space.AddShape(resolv.NewRectangle(cell+(x*cell), cell+(y*cell), cell*(1+rand.Int31n(16)), cell*(1+rand.Int31n(16))))
 	}
 
-	for _, shape := range space {
+	for _, shape := range *space {
 		shape.SetTags("solid")
 	}
 
@@ -159,7 +159,7 @@ func (w *World1) Update() {
 
 func (w World1) Draw() {
 
-	for _, shape := range space {
+	for _, shape := range *space {
 
 		// Living on the edge~~~
 		// We know that this Space just has Rectangles, so we'll just assume they are

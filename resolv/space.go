@@ -20,8 +20,7 @@ func NewSpace() *Space {
 func (sp *Space) AddShape(shapes ...Shape) {
 	for _, shape := range shapes {
 		if shape == sp {
-			fmt.Println("ERROR! Space ", shape, " cannot add itself!")
-			panic("")
+			panic(fmt.Sprintf("ERROR! Space %s cannot add itself!", shape))
 		}
 		*sp = append(*sp, shape)
 	}

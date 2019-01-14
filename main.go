@@ -14,7 +14,7 @@ var screenWidth int32 = 320
 var screenHeight int32 = 240
 var cell int32 = 4
 
-var space resolv.Space
+var space *resolv.Space
 var renderer *sdl.Renderer
 var window *sdl.Window
 var avgFramerate int
@@ -42,6 +42,8 @@ func main() {
 	gfx.SetFramerate(fpsMan, 60)
 
 	// Change this to one of the other World structs to change the world and see different tests
+
+	space = resolv.NewSpace()
 
 	var world WorldInterface = &World1{}
 

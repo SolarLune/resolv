@@ -36,7 +36,7 @@ func (w *World7) Create() {
 	space.AddShape(resolv.NewRectangle(0, 0, screenWidth, 16))
 	space.AddShape(resolv.NewRectangle(0, screenHeight-16, screenWidth, 16))
 
-	for _, shape := range space {
+	for _, shape := range *space {
 		shape.SetTags("solid")
 	}
 
@@ -234,9 +234,7 @@ func DrawObject(shape resolv.Shape) {
 
 func (w *World7) Draw() {
 
-	shapes := space[:]
-
-	for _, shape := range shapes {
+	for _, shape := range *space {
 		DrawObject(shape)
 	}
 

@@ -17,7 +17,7 @@ func (w World2) Create() {
 	space.AddShape(resolv.NewRectangle(screenWidth-cell, cell, cell, screenHeight-cell))
 	space.AddShape(resolv.NewRectangle(cell, screenHeight-cell, screenWidth-(cell*2), cell))
 
-	for _, shape := range space {
+	for _, shape := range *space {
 		shape.SetTags("solid")
 	}
 
@@ -111,7 +111,7 @@ func (w World2) Draw() {
 
 	touching := "You aren't touching a zone"
 
-	for _, shape := range space {
+	for _, shape := range *space {
 
 		renderer.SetDrawColor(255, 255, 255, 255)
 
