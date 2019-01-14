@@ -74,7 +74,7 @@ func (w *World5) Draw() {
 
 			if line == w.TargetLine {
 				if space.IsColliding(line) {
-					for i, point := range line.IntersectionPoints(space.GetCollidingShapes(line)) {
+					for i, point := range line.GetIntersectionPoints(space) {
 						renderer.SetDrawColor(255, 0, 255, 255)
 						renderer.DrawLine(point.X-5, point.Y, point.X+5, point.Y)
 						renderer.DrawLine(point.X, point.Y-5, point.X, point.Y+5)

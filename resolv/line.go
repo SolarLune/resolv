@@ -22,13 +22,13 @@ func NewLine(x, y, x2, y2 int32) *Line {
 	return l
 }
 
-// BUG(SolarLune): Line.IsColliding() and Line.IntersectionPoints() doesn't work with Circles.
-// BUG(SolarLune): Line.IsColliding() and Line.IntersectionPoints() fail if testing two lines that intersect along the exact same slope.
+// BUG(SolarLune): Line.IsColliding() and Line.GetIntersectionPoints() doesn't work with Circles.
+// BUG(SolarLune): Line.IsColliding() and Line.GetIntersectionPoints() fail if testing two lines that intersect along the exact same slope.
 
 // IsColliding returns if the Line is colliding with the other Shape. Currently, Circle-Line collision is missing.
 func (l *Line) IsColliding(other Shape) bool {
 
-	intersectionPoints := l.IntersectionPoints(other)
+	intersectionPoints := l.GetIntersectionPoints(other)
 
 	colliding := len(intersectionPoints) > 0
 
@@ -47,10 +47,10 @@ type IntersectionPoint struct {
 	Shape Shape
 }
 
-// IntersectionPoints returns the intersection points of a Line with another Shape as an array of arrays, composed of X and Y position int32s.
-// The returned list of intersection points are always sorted in order of distance from the start of the casting Line to the end.
+// GetIntersectionPoints returns the intersection points of a Line with another Shape as an array of IntersectionPoints.
+// The returned list of intersection points are always sorted in order of distance from the start of the casting Line to each intersection.
 // Currently, Circle-Line collision is missing.
-func (l *Line) IntersectionPoints(other Shape) []IntersectionPoint {
+func (l *Line) GetIntersectionPoints(other Shape) []IntersectionPoint {
 
 	intersections := []IntersectionPoint{}
 
@@ -87,21 +87,21 @@ func (l *Line) IntersectionPoints(other Shape) []IntersectionPoint {
 	if ok {
 
 		side := NewLine(r.X, r.Y, r.X, r.Y+r.H)
-		intersections = append(intersections, l.IntersectionPoints(side)...)
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
 		side.Y = r.Y + r.H
 		side.X2 = r.X + r.W
 		side.Y2 = r.Y + r.H
-		intersections = append(intersections, l.IntersectionPoints(side)...)
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
 		side.X = r.X + r.W
 		side.Y2 = r.Y
-		intersections = append(intersections, l.IntersectionPoints(side)...)
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
 		side.Y = r.Y
 		side.X2 = r.X
 		side.Y2 = r.Y
-		intersections = append(intersections, l.IntersectionPoints(side)...)
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
 	}
 
@@ -120,7 +120,7 @@ func (l *Line) IntersectionPoints(other Shape) []IntersectionPoint {
 
 	if ok {
 		for _, shape := range *sp {
-			intersections = append(intersections, l.IntersectionPoints(shape)...)
+			intersections = append(intersections, l.GetIntersectionPoints(shape)...)
 		}
 	}
 
