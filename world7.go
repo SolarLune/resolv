@@ -37,34 +37,34 @@ func (w *World7) Create() {
 	space.AddShape(resolv.NewRectangle(0, screenHeight-16, screenWidth, 16))
 
 	for _, shape := range *space {
-		shape.SetTags("solid")
+		shape.AddTags("solid")
 	}
 
 	sticky := resolv.NewRectangle(64, 64, 16, 16)
-	sticky.SetTags("sticky", "solid")
+	sticky.AddTags("sticky", "solid")
 	space.AddShape(sticky)
 
 	sticky = resolv.NewRectangle(96, 80, 16, 16)
-	sticky.SetTags("sticky", "solid")
+	sticky.AddTags("sticky", "solid")
 	space.AddShape(sticky)
 
 	sticky = resolv.NewRectangle(32, 120, 16, 16)
-	sticky.SetTags("sticky", "solid")
+	sticky.AddTags("sticky", "solid")
 	space.AddShape(sticky)
 
 	stickyCircle := resolv.NewCircle(140, 96, 8)
-	stickyCircle.SetTags("sticky", "solid")
+	stickyCircle.AddTags("sticky", "solid")
 	space.AddShape(stickyCircle)
 
 	line := resolv.NewLine(160, 100, 170, 100)
-	line.SetTags("sticky", "solid")
+	line.AddTags("sticky", "solid")
 	space.AddShape(line)
 
 	line = resolv.NewLine(180, 140, 190, 160)
-	line.SetTags("sticky", "solid")
+	line.AddTags("sticky", "solid")
 	space.AddShape(line)
 
-	w.Player.Body.SetTags("player")
+	w.Player.Body.AddTags("player")
 
 }
 
@@ -149,7 +149,7 @@ func (w *World7) Update() {
 
 	if other != nil && other.HasTags("sticky") {
 		w.Player.Body.AddShape(other)
-		w.Player.Body.SetTags("player")
+		w.Player.Body.AddTags("player")
 		space.RemoveShape(other)
 	}
 
@@ -158,7 +158,7 @@ func (w *World7) Update() {
 		if w.Player.Body.Length() > 1 {
 			shape := w.Player.Body.Get(w.Player.Body.Length() - 1) // This is annoying, but I don't know of a way around it
 			w.Player.Body.RemoveShape(shape)
-			shape.SetTags("solid", "sticky")
+			shape.AddTags("solid", "sticky")
 			space.AddShape(shape)
 		}
 

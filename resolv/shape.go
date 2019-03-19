@@ -8,7 +8,9 @@ type Shape interface {
 	IsCollideable() bool
 	SetCollideable(bool)
 	GetTags() []string
-	SetTags(...string)
+	ClearTags()
+	AddTags(...string)
+	RemoveTags(...string) bool
 	HasTags(...string) bool
 	GetData() interface{}
 	SetData(interface{})
@@ -26,14 +28,44 @@ type BasicShape struct {
 	Data        interface{}
 }
 
-// GetTags returns the tags on the Shape.
+// GetTags returns a reference to the the string array representing the tags on the BasicShape.
 func (b *BasicShape) GetTags() []string {
 	return b.tags
 }
 
-// SetTags sets the tags on the Shape.
-func (b *BasicShape) SetTags(tags ...string) {
-	b.tags = tags
+// AddTags adds the specified tags to the BasicShape.
+func (b *BasicShape) AddTags(tags ...string) {
+	if b.tags == nil {
+		b.tags = []string{}
+	}
+	b.tags = append(b.tags, tags...)
+}
+
+// RemoveTags removes the specified tags from the BasicShape, and returns true if the BasicShape had all of the tags specified before removal (so if it removed those tags).
+func (b *BasicShape) RemoveTags(tags ...string) bool {
+
+	removedAll := b.HasTags(tags...)
+
+	for _, t := range tags {
+
+		for i := len(b.tags) - 1; i >= 0; i-- {
+
+			if t == b.tags[i] {
+				b.tags = append(b.tags[:i], b.tags[i+1:]...)
+				break
+			}
+
+		}
+
+	}
+
+	return removedAll
+
+}
+
+// ClearTags clears the tags active on the BasicShape.
+func (b *BasicShape) ClearTags() {
+	b.tags = []string{}
 }
 
 // HasTags returns true if the Shape has all of the tags provided.

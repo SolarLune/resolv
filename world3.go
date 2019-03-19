@@ -25,15 +25,15 @@ func (w World3) Create() {
 	space.AddShape(resolv.NewCircle(30, 60, cell))
 
 	for _, shape := range *space {
-		shape.SetTags("solid")
+		shape.AddTags("solid")
 	}
 
 	zone := resolv.NewRectangle(screenWidth/2, cell*2, screenWidth/2-(cell*2), screenHeight/2)
-	zone.SetTags("zone")
+	zone.AddTags("zone")
 	space.AddShape(zone)
 
 	secondCircleZone = resolv.NewCircle(70, 70, 8)
-	secondCircleZone.SetTags("zone")
+	secondCircleZone.AddTags("zone")
 	space.AddShape(secondCircleZone)
 
 	mainCircle = resolv.NewCircle(screenWidth/2, screenHeight/2, 32)

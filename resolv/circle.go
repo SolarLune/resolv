@@ -25,47 +25,32 @@ func (c *Circle) IsColliding(other Shape) bool {
 		return false
 	}
 
-	b, ok := other.(*Circle)
+	switch b := other.(type) {
 
-	if ok {
-
+	case *Circle:
 		return Distance(c.X, c.Y, b.X, b.Y) <= c.Radius+b.Radius
-
-	}
-
-	r, ok := other.(*Rectangle)
-
-	if ok {
-
+	case *Rectangle:
 		closestX := c.X
 		closestY := c.Y
 
-		if c.X < r.X {
-			closestX = r.X
-		} else if c.X > r.X+r.W {
-			closestX = r.X + r.W
+		if c.X < b.X {
+			closestX = b.X
+		} else if c.X > b.X+b.W {
+			closestX = b.X + b.W
 		}
 
-		if c.Y < r.Y {
-			closestY = r.Y
-		} else if c.Y > r.Y+r.H {
-			closestY = r.Y + r.H
+		if c.Y < b.Y {
+			closestY = b.Y
+		} else if c.Y > b.Y+b.H {
+			closestY = b.Y + b.H
 		}
 
 		return Distance(c.X, c.Y, closestX, closestY) <= c.Radius
+	case *Line:
+		return b.IsColliding(c)
+	case *Space:
+		return b.IsColliding(c)
 
-	}
-
-	l, ok := other.(*Line)
-
-	if ok {
-		return l.IsColliding(c)
-	}
-
-	sp, ok := other.(*Space)
-
-	if ok {
-		return sp.IsColliding(r)
 	}
 
 	fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Circle ", c, "!")

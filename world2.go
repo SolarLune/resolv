@@ -18,15 +18,15 @@ func (w World2) Create() {
 	space.AddShape(resolv.NewRectangle(cell, screenHeight-cell, screenWidth-(cell*2), cell))
 
 	for _, shape := range *space {
-		shape.SetTags("solid")
+		shape.AddTags("solid")
 	}
 
 	zone := resolv.NewRectangle(screenWidth/2, cell*2, screenWidth/2-(cell*2), screenHeight/2)
-	zone.SetTags("zone")
+	zone.AddTags("zone")
 	space.AddShape(zone)
 
 	zone = resolv.NewRectangle(cell*4, cell*7, cell*2, cell*4)
-	zone.SetTags("zone")
+	zone.AddTags("zone")
 	space.AddShape(zone)
 
 	squares = make([]*Bouncer, 0)

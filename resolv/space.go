@@ -204,10 +204,30 @@ func (sp *Space) GetTags() []string {
 	return []string{}
 }
 
-// SetTags sets the provided tags on all Shapes contained within the Space.
-func (sp *Space) SetTags(tags ...string) {
+// AddTags sets the provided tags on all Shapes contained within the Space.
+func (sp *Space) AddTags(tags ...string) {
 	for _, shape := range *sp {
-		shape.SetTags(tags...)
+		shape.AddTags(tags...)
+	}
+}
+
+// RemoveTags removes the provided tags from all Shapes contained within the Space and returns true if the tags were removed from the Shape.
+func (sp *Space) RemoveTags(tags ...string) bool {
+
+	rem := true
+	for _, shape := range *sp {
+		if !shape.RemoveTags(tags...) {
+			rem = false
+		}
+	}
+	return rem
+
+}
+
+// ClearTags removes all tags from all Shapes within the Space.
+func (sp *Space) ClearTags() {
+	for _, shape := range *sp {
+		shape.ClearTags()
 	}
 }
 

@@ -58,9 +58,9 @@ func (l *Line) GetIntersectionPoints(other Shape) []IntersectionPoint {
 		return intersections
 	}
 
-	b, ok := other.(*Line)
+	switch b := other.(type) {
 
-	if ok {
+	case *Line:
 
 		det := (l.X2-l.X)*(b.Y2-b.Y) - (b.X2-b.X)*(l.Y2-l.Y)
 
@@ -79,49 +79,31 @@ func (l *Line) GetIntersectionPoints(other Shape) []IntersectionPoint {
 			}
 
 		}
-
-	}
-
-	r, ok := other.(*Rectangle)
-
-	if ok {
-
-		side := NewLine(r.X, r.Y, r.X, r.Y+r.H)
+	case *Rectangle:
+		side := NewLine(b.X, b.Y, b.X, b.Y+b.H)
 		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
-		side.Y = r.Y + r.H
-		side.X2 = r.X + r.W
-		side.Y2 = r.Y + r.H
+		side.Y = b.Y + b.H
+		side.X2 = b.X + b.W
+		side.Y2 = b.Y + b.H
 		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
-		side.X = r.X + r.W
-		side.Y2 = r.Y
+		side.X = b.X + b.W
+		side.Y2 = b.Y
 		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
-		side.Y = r.Y
-		side.X2 = r.X
-		side.Y2 = r.Y
+		side.Y = b.Y
+		side.X2 = b.X
+		side.Y2 = b.Y
 		intersections = append(intersections, l.GetIntersectionPoints(side)...)
-
-	}
-
-	_, ok = other.(*Circle)
-
-	if ok {
-
-		// return false
-
-		// 	TO-DO: Add this later, because this is kinda hard and would necessitate some complex vector math that, for whatever
-		//  reason, is not even readily available in a Golang library as far as I can tell???
-
-	}
-
-	sp, ok := other.(*Space)
-
-	if ok {
-		for _, shape := range *sp {
+	case *Space:
+		for _, shape := range *b {
 			intersections = append(intersections, l.GetIntersectionPoints(shape)...)
 		}
+	case *Circle:
+		// 	TO-DO: Add this later, because this is kinda hard and would necessitate some complex vector math that, for whatever
+		//  reason, is not even readily available in a Golang library as far as I can tell???
+		break
 	}
 
 	// fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Line ", l, "!")

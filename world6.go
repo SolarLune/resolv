@@ -37,37 +37,37 @@ func (w *World6) Create() {
 	space.AddShape(resolv.NewRectangle(c*4, screenHeight-c*4, c*3, c))
 
 	for _, shape := range *space {
-		shape.SetTags("solid")
+		shape.AddTags("solid")
 	}
 
 	// A ramp
 	line := resolv.NewLine(c*5, screenHeight-c, c*6, screenHeight-c-8)
-	line.SetTags("ramp")
+	line.AddTags("ramp")
 	space.AddShape(line)
 
 	line = resolv.NewLine(c*6, screenHeight-c-8, c*7, screenHeight-c-8)
-	line.SetTags("ramp")
+	line.AddTags("ramp")
 
 	space.AddShape(line)
 
 	rect := resolv.NewRectangle(c*7, screenHeight-c-8, c*2, 8)
-	rect.SetTags("solid")
+	rect.AddTags("solid")
 	space.AddShape(rect)
 
 	line = resolv.NewLine(c*9, screenHeight-c-8, c*11, screenHeight-c)
-	line.SetTags("ramp")
+	line.AddTags("ramp")
 	space.AddShape(line)
 
 	line = resolv.NewLine(c*13, screenHeight-c*4, c*17, screenHeight-c*6)
-	line.SetTags("ramp")
+	line.AddTags("ramp")
 	space.AddShape(line)
 
 	line = resolv.NewLine(c*6, screenHeight-c*7, c*7, screenHeight-c*7)
-	line.SetTags("ramp")
+	line.AddTags("ramp")
 	space.AddShape(line)
 
 	w.FloatingPlatform = resolv.NewLine(c*8, screenHeight-c*7, c*9, screenHeight-c*6)
-	w.FloatingPlatform.SetTags("ramp")
+	w.FloatingPlatform.AddTags("ramp")
 	space.AddShape(w.FloatingPlatform)
 	w.FloatingPlatformY = float64(w.FloatingPlatform.Y)
 

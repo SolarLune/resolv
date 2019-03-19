@@ -46,7 +46,9 @@ func MakeNewBouncer() *Bouncer {
 
 	}
 
-	bouncer.Rect.SetTags("bouncer", "solid")
+	bouncer.Rect.AddTags("bouncer", "solid")
+
+	bouncer.Rect.SetData(bouncer)
 
 	squares = append(squares, bouncer)
 
@@ -79,7 +81,7 @@ func (w *World1) Create() {
 	}
 
 	for _, shape := range *space {
-		shape.SetTags("solid")
+		shape.AddTags("solid")
 	}
 
 	MakeNewBouncer()

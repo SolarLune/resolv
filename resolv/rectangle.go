@@ -1,7 +1,5 @@
 package resolv
 
-import "fmt"
-
 // Rectangle represents a rectangle.
 type Rectangle struct {
 	BasicShape
@@ -25,33 +23,13 @@ func (r *Rectangle) IsColliding(other Shape) bool {
 		return false
 	}
 
-	b, ok := other.(*Rectangle)
-
-	if ok {
+	switch b := other.(type) {
+	case *Rectangle:
 		return r.X > b.X-r.W && r.Y > b.Y-r.H && r.X < b.X+b.W && r.Y < b.Y+b.H
+	default:
+		return b.IsColliding(r)
 	}
 
-	c, ok := other.(*Circle)
-
-	if ok {
-		return c.IsColliding(r)
-	}
-
-	l, ok := other.(*Line)
-
-	if ok {
-		return l.IsColliding(r)
-	}
-
-	sp, ok := other.(*Space)
-
-	if ok {
-		return sp.IsColliding(r)
-	}
-
-	fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against a Rectangle ", r, "!")
-
-	return false
 }
 
 // WouldBeColliding returns whether the Rectangle would be colliding with the other Shape if it were to move in the
