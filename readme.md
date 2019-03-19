@@ -61,7 +61,7 @@ func Update() {
     // that stores a value of 2.
     dx := 2
 
-    // Here, we check to see if there's a collision should shape1 try to move to the right by 10 pixels. The Resolve()
+    // Here, we check to see if there's a collision should shape1 try to move to the right by the delta movement. The Resolve()
     // functions return a Collision object that has information about whether the attempted movement would work,
     // and whether it resulted in a collision or not.
     resolution := resolv.Resolve(shape1, shape2, dx, 0)
@@ -69,8 +69,10 @@ func Update() {
     if resolution.Colliding() {
         
         // If there was a collision, then shape1 couldn't move fully to the right. It came into contact with shape2,
-        // and the variable collision now holds a Collision object with helpful information, like how far it was able to move.
-        // Move the shape over to the right by the distance that it can to come into full contact with shape2.
+        // and the variable "resolution" now holds a Collision struct with helpful information, like how far to move to be touching.
+        
+        // Here we just move the shape over to the right by the distance reported by the Collision struct so it'll come into contact 
+        // with shape2.
         shape1.X += resolution.ResolveX
 
     } else {
@@ -82,7 +84,11 @@ func Update() {
 
     // We can also do collision testing only pretty simply:
 
-    collision := shape1.IsColliding(shape2)
+    colliding := shape1.IsColliding(shape2)
+
+    if colliding {
+        fmt.Println("WHOA! shape1 and shape2 are colliding.")
+    }
 
 }
 
@@ -94,16 +100,16 @@ This is fine for simple testing, but if you have even a slightly more complex ga
 
 A Space represents a container for Shapes to exist in and test against. This way, the fundamentals are the same, but it should scale up more easily, since you don't have to do manual for checking everywhere you want to test a Shape against others. 
 
-A Space is just a pointer to a slice of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces being pointers to slices means that they can also be filtered out as necessary to easily test a smaller selection of Shapes when desired.
+A Space is just a pointer to a slice of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces also contain functions to filter them out as necessary to easily test a smaller selection of Shapes when desired.
 
 Here's an example using a Space to check one Shape against others:
 
 ```go
 
-// Here, in the game's init loop...
-
-var space resolv.Space
+var space *resolv.Space
 var playerRect *resolv.Rectangle
+
+// Here, in the game's init loop...
 
 func Init() {
 
@@ -113,7 +119,7 @@ func Init() {
     // Create one rectangle - we'll say this one represents our player.
     playerRect = resolv.NewRectangle(40, 40, 16, 16)
 
-    // Note that we don't have to add the Player Rectangle to the Space; this is only if we want it 
+    // Note that we don't HAVE to add the Player Rectangle to the Space; this is only if we want it 
     // to also be checked for collision testing and resolution within the Space by other Shapes.
     space.AddShape(playerRect)
 
@@ -153,15 +159,15 @@ func Update() {
     dy := 4
 
     /* To check for Shapes with a specific tag, we can filter out the Space they exist 
-    in with either the Space.FilterByTags() or Space.Filter functions. Space.Filter() 
+    in with either the Space.FilterByTags() or Space.Filter() functions. Space.Filter() 
     allows us to provide a function to filter out the Shapes; Space.FilterByTags() 
-    takes the tag names themselves to filter out the Shapes by. */
+    takes tags themselves to filter out the Shapes by. */
 
     // This gives us just the Shapes with the "solid" tag.
     solids := space.FilterByTags("solid")
 
-    // You can provide more tags in the same function, as well. (i.e. 
-    // others := space.FilterByTags("solid", "danger", "zone"))
+    // You can provide multiple tags in the same function to filter by all of them at the same
+    // time, as well. ( i.e. deathZones := space.FilterByTags("danger", "zone") )
 
     /* Now we check each axis individually against the Space (or, in other words, against
     all Shapes conatined within the Space). This is done to allow a collision on one 
@@ -214,7 +220,7 @@ func Init() {
     world.AddShape(ship)
 
     // Make something to dodge!
-    bullet := resolv.NewRectangle(64, 16, 2, 2)
+    bullet := resolv.NewRectangle(64, 8, 2, 2)
     bullet.SetTags("bullet")
     world.AddShape(bullet)
 
