@@ -13,17 +13,12 @@ func NewCircle(x, y, radius int32) *Circle {
 	c := &Circle{Radius: radius}
 	c.X = x
 	c.Y = y
-	c.Collideable = true
 	return c
 }
 
 // IsColliding returns true if the Circle is colliding with the specified other Shape, including the other Shape
 // being wholly within the Circle.
 func (c *Circle) IsColliding(other Shape) bool {
-
-	if !c.Collideable || !other.IsCollideable() {
-		return false
-	}
 
 	switch b := other.(type) {
 

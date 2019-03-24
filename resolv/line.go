@@ -18,7 +18,6 @@ func NewLine(x, y, x2, y2 int32) *Line {
 	l.Y = y
 	l.X2 = x2
 	l.Y2 = y2
-	l.Collideable = true
 	return l
 }
 
@@ -53,10 +52,6 @@ type IntersectionPoint struct {
 func (l *Line) GetIntersectionPoints(other Shape) []IntersectionPoint {
 
 	intersections := []IntersectionPoint{}
-
-	if !l.Collideable || !other.IsCollideable() {
-		return intersections
-	}
 
 	switch b := other.(type) {
 

@@ -159,14 +159,13 @@ func DrawText(x, y int32, textLines ...string) {
 
 		var surf *sdl.Surface
 
-		surf, _ = font.RenderUTF8Solid(text, sdl.Color{R: 255, G: 255, B: 255, A: 255})
+		surf, _ = font.RenderUTF8Solid(text, sdl.Color{R: 50, G: 100, B: 255, A: 255})
 
 		textSurface, _ := renderer.CreateTextureFromSurface(surf)
 		defer textSurface.Destroy()
 
 		_, _, w, h, _ := textSurface.Query()
 
-		textSurface.SetAlphaMod(100)
 		renderer.Copy(textSurface, &sdl.Rect{X: 0, Y: 0, W: w, H: h}, &sdl.Rect{X: x, Y: sy, W: w, H: h})
 
 		sy += 16

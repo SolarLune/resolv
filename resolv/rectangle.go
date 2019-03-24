@@ -11,17 +11,12 @@ func NewRectangle(x, y, w, h int32) *Rectangle {
 	r := &Rectangle{W: w, H: h}
 	r.X = x
 	r.Y = y
-	r.Collideable = true
 	return r
 }
 
 // IsColliding returns whether the Rectangle is colliding with the specified other Shape or not, including the other Shape
 // being wholly contained within the Rectangle.
 func (r *Rectangle) IsColliding(other Shape) bool {
-
-	if !r.Collideable || !other.IsCollideable() {
-		return false
-	}
 
 	switch b := other.(type) {
 	case *Rectangle:

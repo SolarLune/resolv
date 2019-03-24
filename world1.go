@@ -122,6 +122,10 @@ func (w *World1) Update() {
 		if res := solids.Resolve(bouncer.Rect, 0, int32(bouncer.SpeedY)); res.Colliding() && !res.Teleporting {
 			bouncer.Rect.Y += res.ResolveY
 			bouncer.SpeedY *= -1
+			// This makes the bouncers able to rebound higher if they get a boost from another bouncer below~
+			if bouncer.SpeedY < 0 && bouncer.SpeedY > -5 {
+				bouncer.SpeedY = -5
+			}
 			bouncer.BounceFrame = 1
 		} else {
 			bouncer.Rect.Y += int32(bouncer.SpeedY)
@@ -132,6 +136,14 @@ func (w *World1) Update() {
 	if keyboard.KeyDown(sdl.K_UP) {
 		MakeNewBouncer()
 		fmt.Println(len(squares), " bouncers in the world now.")
+	}
+
+	if keyboard.KeyPressed(sdl.K_s) { // The ability to trigger solidity
+		if !squares[0].Rect.HasTags("solid") {
+			space.FilterByTags("bouncer").AddTags("solid")
+		} else {
+			space.FilterByTags("bouncer").RemoveTags("solid")
+		}
 	}
 
 	if keyboard.KeyDown(sdl.K_DOWN) {
@@ -182,7 +194,11 @@ func (w World1) Draw() {
 
 		g := uint8(60) + uint8((255-60)*b.BounceFrame)
 
-		renderer.SetDrawColor(60, g, 255, 255)
+		if b.Rect.HasTags("solid") {
+			renderer.SetDrawColor(60, g, 255, 255)
+		} else {
+			renderer.SetDrawColor(g, g, g, 255)
+		}
 
 		renderer.DrawRect(&sdl.Rect{X: b.Rect.X, Y: b.Rect.Y, W: b.Rect.W, H: b.Rect.H})
 
@@ -193,6 +209,7 @@ func (w World1) Draw() {
 			"Bouncer stress test",
 			"Press Up to spawn bouncers",
 			"Press Down to remove bouncers",
+			"Press 'S' to toggle solidity",
 			"Press 'R' to restart with a new",
 			"layout",
 			"Use the number keys to jump to",

@@ -14,7 +14,7 @@ func Resolve(firstShape Shape, other Shape, deltaX, deltaY int32) Collision {
 	out.ResolveY = deltaY
 	out.ShapeA = firstShape
 
-	if !firstShape.IsCollideable() || !other.IsCollideable() || (deltaX == 0 && deltaY == 0) {
+	if deltaX == 0 && deltaY == 0 {
 		return out
 	}
 

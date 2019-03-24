@@ -5,12 +5,10 @@ package resolv
 type Shape interface {
 	IsColliding(Shape) bool
 	WouldBeColliding(Shape, int32, int32) bool
-	IsCollideable() bool
-	SetCollideable(bool)
 	GetTags() []string
 	ClearTags()
 	AddTags(...string)
-	RemoveTags(...string) bool
+	RemoveTags(...string)
 	HasTags(...string) bool
 	GetData() interface{}
 	SetData(interface{})
@@ -20,12 +18,11 @@ type Shape interface {
 }
 
 // BasicShape isn't to be used directly; it just has some basic functions and data, common to all structs that embed it, like
-// position and collide-ability. It is embedded in other Shapes.
+// position and tags. It is embedded in other Shapes.
 type BasicShape struct {
-	X, Y        int32
-	tags        []string
-	Collideable bool
-	Data        interface{}
+	X, Y int32
+	tags []string
+	Data interface{}
 }
 
 // GetTags returns a reference to the the string array representing the tags on the BasicShape.
@@ -42,9 +39,7 @@ func (b *BasicShape) AddTags(tags ...string) {
 }
 
 // RemoveTags removes the specified tags from the BasicShape, and returns true if the BasicShape had all of the tags specified before removal (so if it removed those tags).
-func (b *BasicShape) RemoveTags(tags ...string) bool {
-
-	removedAll := b.HasTags(tags...)
+func (b *BasicShape) RemoveTags(tags ...string) {
 
 	for _, t := range tags {
 
@@ -52,14 +47,11 @@ func (b *BasicShape) RemoveTags(tags ...string) bool {
 
 			if t == b.tags[i] {
 				b.tags = append(b.tags[:i], b.tags[i+1:]...)
-				break
 			}
 
 		}
 
 	}
-
-	return removedAll
 
 }
 
@@ -88,16 +80,6 @@ func (b *BasicShape) HasTags(tags ...string) bool {
 	}
 
 	return hasTags
-}
-
-// IsCollideable returns whether the Shape is currently collide-able or not.
-func (b *BasicShape) IsCollideable() bool {
-	return b.Collideable
-}
-
-// SetCollideable sets the Shape's collide-ability.
-func (b *BasicShape) SetCollideable(on bool) {
-	b.Collideable = on
 }
 
 // GetData returns the data on the Shape.
