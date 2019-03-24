@@ -288,12 +288,12 @@ func (sp *Space) Move(dx, dy int32) {
 	}
 }
 
-// Length returns the length of the Space. This is a convenience function.
+// Length returns the length of the Space (number of Shapes contained within the Space). This is a convenience function, standing in for len(*space).
 func (sp *Space) Length() int {
 	return len(*sp)
 }
 
-// Get allows you to get a Shape by index from the Space easily. This is a convenience function.
+// Get allows you to get a Shape by index from the Space easily. This is a convenience function, standing in for (*space)[index].
 func (sp *Space) Get(index int) Shape {
 	return (*sp)[index]
 }

@@ -38,7 +38,7 @@ func (b *BasicShape) AddTags(tags ...string) {
 	b.tags = append(b.tags, tags...)
 }
 
-// RemoveTags removes the specified tags from the BasicShape, and returns true if the BasicShape had all of the tags specified before removal (so if it removed those tags).
+// RemoveTags removes the specified tags from the BasicShape.
 func (b *BasicShape) RemoveTags(tags ...string) {
 
 	for _, t := range tags {
