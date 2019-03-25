@@ -1,23 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"math"
 	"strconv"
 
-	"github.com/SolarLune/resolv/resolv"
-	"github.com/veandco/go-sdl2/gfx"
-	"github.com/veandco/go-sdl2/sdl"
-	"github.com/veandco/go-sdl2/ttf"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 var screenWidth int32 = 320
 var screenHeight int32 = 240
 var cell int32 = 4
-
-var space *resolv.Space
-var renderer *sdl.Renderer
-var window *sdl.Window
-var avgFramerate int
 
 var drawHelpText = true
 
@@ -25,150 +17,107 @@ func main() {
 
 	// defer profile.Start(profile.ProfilePath(".")).Stop()
 
-	sdl.Init(sdl.INIT_EVERYTHING)
-	defer sdl.Quit()
+	rl.SetConfigFlags(rl.FlagWindowResizable)
 
-	ttf.Init()
-	defer ttf.Quit()
+	rl.InitWindow(screenWidth, screenHeight, "resolv Tests")
 
-	window, renderer, _ = sdl.CreateWindowAndRenderer(screenWidth, screenHeight, sdl.WINDOW_SHOWN|sdl.WINDOW_RESIZABLE)
+	worldIndex := 0
+	worlds := []WorldInterface{
+		&WorldBounce{},
+		&WorldZones{},
+		&WorldLines{},
+		&WorldPlatformer{},
+		&WorldCompound{},
+	}
 
-	window.SetResizable(true)
+	for _, world := range worlds {
+		world.Create()
+	}
 
-	renderer.SetLogicalSize(screenWidth, screenHeight)
+	targetFPS := int32(60)
+	rl.SetTargetFPS(targetFPS)
 
-	fpsMan := &gfx.FPSmanager{}
-	gfx.InitFramerate(fpsMan)
-	gfx.SetFramerate(fpsMan, 60)
+	framebuffer := rl.LoadRenderTexture(screenWidth, screenHeight) // Make a framebuffer so it stretches to fill the window
+	rl.SetTextureFilter(framebuffer.Texture, rl.FilterPoint)       // No blurry!
 
-	// Change this to one of the other World structs to change the world and see different tests
+	for !rl.WindowShouldClose() {
 
-	space = resolv.NewSpace()
+		world := worlds[worldIndex]
 
-	var world WorldInterface = &World1{}
-
-	world.Create()
-
-	running := true
-
-	var frameCount int
-	var framerateDelay uint32
-
-	for running {
-
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
-				running = false
-			case *sdl.KeyboardEvent:
-				keyboard.ReportEvent(event.(*sdl.KeyboardEvent))
-			}
+		if rl.IsKeyPressed(rl.KeyOne) {
+			rl.SetWindowSize(int(screenWidth), int(screenHeight))
+		} else if rl.IsKeyPressed(rl.KeyTwo) {
+			rl.SetWindowSize(int(screenWidth*2), int(screenHeight*2))
+		} else if rl.IsKeyPressed(rl.KeyThree) {
+			rl.SetWindowSize(int(screenWidth*3), int(screenHeight*3))
+		} else if rl.IsKeyPressed(rl.KeyFour) {
+			rl.SetWindowSize(int(screenWidth*4), int(screenHeight*4))
+		} else if rl.IsKeyPressed(rl.KeyFive) {
+			rl.SetWindowSize(int(screenWidth*5), int(screenHeight*5))
 		}
 
-		keyboard.Update()
-
-		if keyboard.KeyPressed(sdl.K_F2) {
-			gfx.SetFramerate(fpsMan, 10)
-		} else if keyboard.KeyPressed(sdl.K_F3) {
-			gfx.SetFramerate(fpsMan, 60)
+		if rl.IsKeyPressed(rl.KeyF2) {
+			targetFPS = 60
+			rl.SetTargetFPS(targetFPS)
+		} else if rl.IsKeyPressed(rl.KeyF3) {
+			targetFPS = 30
+			rl.SetTargetFPS(targetFPS)
+		} else if rl.IsKeyPressed(rl.KeyF4) {
+			targetFPS = 10
+			rl.SetTargetFPS(targetFPS)
 		}
 
-		if keyboard.KeyPressed(sdl.K_1) {
-			world.Destroy()
-			world = &World1{}
-			world.Create()
-		}
-		if keyboard.KeyPressed(sdl.K_2) {
-			world.Destroy()
-			world = &World2{}
-			world.Create()
-		}
-		if keyboard.KeyPressed(sdl.K_3) {
-			world.Destroy()
-			world = &World3{}
-			world.Create()
-		}
-		if keyboard.KeyPressed(sdl.K_4) {
-			world.Destroy()
-			world = &World4{}
-			world.Create()
-		}
-		if keyboard.KeyPressed(sdl.K_5) {
-			world.Destroy()
-			world = &World5{}
-			world.Create()
-		}
-		if keyboard.KeyPressed(sdl.K_6) {
-			world.Destroy()
-			world = &World6{}
-			world.Create()
-		}
-		if keyboard.KeyPressed(sdl.K_7) {
-			world.Destroy()
-			world = &World7{}
-			world.Create()
+		if rl.IsKeyPressed(rl.KeyE) {
+			worldIndex++
+		} else if rl.IsKeyPressed(rl.KeyQ) {
+			worldIndex--
 		}
 
-		if keyboard.KeyPressed(sdl.K_F1) {
+		if worldIndex > len(worlds)-1 {
+			worldIndex = 0
+		} else if worldIndex < 0 {
+			worldIndex = len(worlds) - 1
+		}
+
+		if rl.IsKeyPressed(rl.KeyF1) {
 			drawHelpText = !drawHelpText
 		}
 
-		if keyboard.KeyPressed(sdl.K_ESCAPE) {
-			running = false
-		}
-
-		if keyboard.KeyPressed(sdl.K_r) {
+		if rl.IsKeyPressed(rl.KeyR) {
+			world.Destroy()
 			world.Create()
 		}
 
 		world.Update()
 
-		renderer.SetDrawColor(20, 30, 40, 255)
+		rl.ClearBackground(rl.Color{20, 20, 40, 255})
 
-		renderer.Clear()
+		rl.BeginTextureMode(framebuffer)
+
+		rl.BeginDrawing()
 
 		world.Draw()
 
-		framerateDelay += gfx.FramerateDelay(fpsMan)
+		fps := strconv.Itoa(int(math.Round(float64(1.0 / 60.0 / rl.GetFrameTime() * 60.0))))
 
-		if framerateDelay >= 1000 {
-			avgFramerate = frameCount
-			framerateDelay -= 1000
-			frameCount = 0
-			fmt.Println(avgFramerate, " FPS")
+		DrawText(screenWidth-32, 0, fps)
+
+		if drawHelpText {
+			DrawText(16, screenHeight-64,
+				"Use F2, F3, and F4 to change the target framerate.",
+				"Use the number keys to change the window scale.",
+				"Use the 'Q' and 'E' keys to",
+				"jump between worlds.",
+				"Press F1 to turn on or off this text.",
+			)
 		}
 
-		frameCount++
+		rl.EndTextureMode()
 
-		DrawText(screenWidth-32, 0, strconv.Itoa(avgFramerate))
+		rl.DrawTexturePro(framebuffer.Texture, rl.Rectangle{0, 0, float32(screenWidth), -float32(screenHeight)},
+			rl.Rectangle{0, 0, float32(rl.GetScreenWidth()), float32(rl.GetScreenHeight())}, rl.Vector2{}, 0, rl.White)
 
-		renderer.Present()
-
-	}
-
-}
-
-func DrawText(x, y int32, textLines ...string) {
-
-	sy := y
-
-	for _, text := range textLines {
-
-		font, _ := ttf.OpenFont("ARCADEPI.TTF", 12)
-		defer font.Close()
-
-		var surf *sdl.Surface
-
-		surf, _ = font.RenderUTF8Solid(text, sdl.Color{R: 50, G: 100, B: 255, A: 255})
-
-		textSurface, _ := renderer.CreateTextureFromSurface(surf)
-		defer textSurface.Destroy()
-
-		_, _, w, h, _ := textSurface.Query()
-
-		renderer.Copy(textSurface, &sdl.Rect{X: 0, Y: 0, W: w, H: h}, &sdl.Rect{X: x, Y: sy, W: w, H: h})
-
-		sy += 16
+		rl.EndDrawing()
 
 	}
 

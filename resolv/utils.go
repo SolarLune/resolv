@@ -24,15 +24,13 @@ func Resolve(firstShape Shape, other Shape, deltaX, deltaY int32) Collision {
 	primeX := true
 	slope := float32(0)
 
-	if deltaY != 0 && deltaX != 0 {
-		slope = float32(deltaY) / float32(deltaX)
-	}
-
 	if math.Abs(float64(deltaY)) > math.Abs(float64(deltaX)) {
 		primeX = false
 		if deltaY != 0 && deltaX != 0 {
 			slope = float32(deltaX) / float32(deltaY)
 		}
+	} else if deltaY != 0 && deltaX != 0 {
+		slope = float32(deltaY) / float32(deltaX)
 	}
 
 	for true {

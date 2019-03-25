@@ -3,77 +3,79 @@ package main
 import (
 	"math"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
+
 	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-type World6 struct {
-	Player            *Bouncer
+type WorldPlatformer struct {
+	Player            *Square
+	Space             *resolv.Space
 	FloatingPlatform  *resolv.Line
 	FloatingPlatformY float64
 }
 
-func (w *World6) Create() {
+func (w *WorldPlatformer) Create() {
 
-	space.Clear()
+	w.Space = resolv.NewSpace()
+	w.Space.Clear()
 
-	w.Player = MakeNewBouncer()
-	w.Player.Rect.X = 32
+	w.Player = NewSquare(w.Space)
+	w.Player.Rect.X = 64
 	w.Player.Rect.Y = 32
 	w.Player.Rect.W = 16
 	w.Player.Rect.H = 16
 	w.Player.SpeedX = 0
 	w.Player.SpeedY = 0
 
-	space.AddShape(w.Player.Rect)
+	w.Space.Add(w.Player.Rect)
 
-	space.AddShape(resolv.NewRectangle(0, 0, 16, screenHeight))
-	space.AddShape(resolv.NewRectangle(screenWidth-16, 0, 16, screenHeight))
-	space.AddShape(resolv.NewRectangle(0, 0, screenWidth, 16))
-	space.AddShape(resolv.NewRectangle(0, screenHeight-16, screenWidth, 16))
+	w.Space.Add(resolv.NewRectangle(0, 0, 16, screenHeight))
+	w.Space.Add(resolv.NewRectangle(screenWidth-16, 0, 16, screenHeight))
+	w.Space.Add(resolv.NewRectangle(0, 0, screenWidth, 16))
+	w.Space.Add(resolv.NewRectangle(0, screenHeight-16, screenWidth, 16))
 
 	c := int32(16)
 
-	space.AddShape(resolv.NewRectangle(c*4, screenHeight-c*4, c*3, c))
+	w.Space.Add(resolv.NewRectangle(c*4, screenHeight-c*4, c*3, c))
 
-	for _, shape := range *space {
-		shape.AddTags("solid")
-	}
+	w.Space.AddTags("solid")
 
 	// A ramp
 	line := resolv.NewLine(c*5, screenHeight-c, c*6, screenHeight-c-8)
 	line.AddTags("ramp")
-	space.AddShape(line)
+	w.Space.Add(line)
 
 	line = resolv.NewLine(c*6, screenHeight-c-8, c*7, screenHeight-c-8)
 	line.AddTags("ramp")
 
-	space.AddShape(line)
+	w.Space.Add(line)
 
 	rect := resolv.NewRectangle(c*7, screenHeight-c-8, c*2, 8)
 	rect.AddTags("solid")
-	space.AddShape(rect)
+	w.Space.Add(rect)
 
 	line = resolv.NewLine(c*9, screenHeight-c-8, c*11, screenHeight-c)
 	line.AddTags("ramp")
-	space.AddShape(line)
+	w.Space.Add(line)
 
 	line = resolv.NewLine(c*13, screenHeight-c*4, c*17, screenHeight-c*6)
 	line.AddTags("ramp")
-	space.AddShape(line)
+	w.Space.Add(line)
 
 	line = resolv.NewLine(c*6, screenHeight-c*7, c*7, screenHeight-c*7)
 	line.AddTags("ramp")
-	space.AddShape(line)
+	w.Space.Add(line)
 
 	w.FloatingPlatform = resolv.NewLine(c*8, screenHeight-c*7, c*9, screenHeight-c*6)
 	w.FloatingPlatform.AddTags("ramp")
-	space.AddShape(w.FloatingPlatform)
+	w.Space.Add(w.FloatingPlatform)
 	w.FloatingPlatformY = float64(w.FloatingPlatform.Y)
 
 }
 
-func (w *World6) Update() {
+func (w *WorldPlatformer) Update() {
 
 	w.Player.SpeedY += 0.5
 
@@ -95,11 +97,11 @@ func (w *World6) Update() {
 		w.Player.SpeedX = 0
 	}
 
-	if keyboard.KeyDown(sdl.K_RIGHT) {
+	if rl.IsKeyDown(rl.KeyRight) {
 		w.Player.SpeedX += accel
 	}
 
-	if keyboard.KeyDown(sdl.K_LEFT) {
+	if rl.IsKeyDown(rl.KeyLeft) {
 		w.Player.SpeedX -= accel
 	}
 
@@ -114,18 +116,18 @@ func (w *World6) Update() {
 	// JUMP
 
 	// Check for a collision downwards by just attempting a resolution downwards and seeing if it collides with something.
-	down := space.Resolve(w.Player.Rect, 0, 4)
+	down := w.Space.Resolve(w.Player.Rect, 0, 4)
 	onGround := down.Colliding()
 
-	if keyboard.KeyPressed(sdl.K_x) && onGround {
+	if rl.IsKeyPressed(rl.KeyX) && onGround {
 		w.Player.SpeedY = -8
 	}
 
 	x := int32(w.Player.SpeedX)
 	y := int32(w.Player.SpeedY)
 
-	solids := space.FilterByTags("solid")
-	ramps := space.FilterByTags("ramp")
+	solids := w.Space.FilterByTags("solid")
+	ramps := w.Space.FilterByTags("ramp")
 
 	// X-movement. We only want to collide with solid objects (not ramps) because we want to be able to move up them
 	// and don't need to be inhibited on the x-axis when doing so.
@@ -162,21 +164,23 @@ func (w *World6) Update() {
 
 }
 
-func (w *World6) Draw() {
+func (w *WorldPlatformer) Draw() {
 
-	for _, shape := range *space {
+	for _, shape := range *w.Space {
 
 		rect, ok := shape.(*resolv.Rectangle)
+
+		drawColor := rl.LightGray
 
 		if ok {
 
 			if rect == w.Player.Rect {
-				renderer.SetDrawColor(0, 128, 255, 255)
-			} else {
-				renderer.SetDrawColor(255, 255, 255, 255)
+				drawColor = rl.Green
+				rl.DrawLine(rect.X+5, rect.Y+3, rect.X+5, rect.Y+8, drawColor)
+				rl.DrawLine(rect.X+8, rect.Y+3, rect.X+8, rect.Y+8, drawColor)
 			}
 
-			renderer.DrawRect(&sdl.Rect{rect.X, rect.Y, rect.W, rect.H})
+			rl.DrawRectangleLines(rect.X, rect.Y, rect.W, rect.H, drawColor)
 
 		}
 
@@ -184,23 +188,24 @@ func (w *World6) Draw() {
 
 		if ok {
 
-			renderer.DrawLine(line.X, line.Y, line.X2, line.Y2)
+			rl.DrawLine(line.X, line.Y, line.X2, line.Y2, rl.Blue)
 
 		}
 
 	}
 
 	if drawHelpText {
-		DrawText(0, 0,
-			"Platformer test",
-			"Use the arrow keys to move",
-			"Press X to jump",
-			"You can jump through lines or ramps")
+		DrawText(32, 16,
+			"-Platformer test-",
+			"You are the green square.",
+			"Use the arrow keys to move.",
+			"Press X to jump.",
+			"You can jump through blue ramps / platforms.")
 	}
 
 }
 
-func (w *World6) Destroy() {
-	space.Clear()
+func (w *WorldPlatformer) Destroy() {
+	w.Space.Clear()
 	w.Player = nil
 }

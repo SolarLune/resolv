@@ -16,8 +16,8 @@ func NewSpace() *Space {
 	return sp
 }
 
-// AddShape adds the designated Shapes to the Space. You cannot add the Space to itself.
-func (sp *Space) AddShape(shapes ...Shape) {
+// Add adds the designated Shapes to the Space. You cannot add the Space to itself.
+func (sp *Space) Add(shapes ...Shape) {
 	for _, shape := range shapes {
 		if shape == sp {
 			panic(fmt.Sprintf("ERROR! Space %s cannot add itself!", shape))
@@ -26,8 +26,8 @@ func (sp *Space) AddShape(shapes ...Shape) {
 	}
 }
 
-// RemoveShape removes the designated Shapes from the Space.
-func (sp *Space) RemoveShape(shapes ...Shape) {
+// Remove removes the designated Shapes from the Space.
+func (sp *Space) Remove(shapes ...Shape) {
 
 	for _, shape := range shapes {
 
@@ -79,7 +79,7 @@ func (sp *Space) GetCollidingShapes(shape Shape) *Space {
 	for _, other := range *sp {
 		if other != shape {
 			if shape.IsColliding(other) {
-				newSpace.AddShape(other)
+				newSpace.Add(other)
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func (sp *Space) Filter(filterFunc func(Shape) bool) *Space {
 	subSpace := NewSpace()
 	for _, shape := range *sp {
 		if filterFunc(shape) {
-			subSpace.AddShape(shape)
+			subSpace.Add(shape)
 		}
 	}
 	return subSpace
