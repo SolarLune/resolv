@@ -146,7 +146,7 @@ func (w *WorldCompound) Draw() {
 			"You're the green square. Use",
 			"the arrow keys to move.",
 			"Touch a blue square to absorb it.",
-			"Press the X key to absorbed squares.",
+			"Press the X key to detach absorbed squares.",
 		)
 	}
 }
