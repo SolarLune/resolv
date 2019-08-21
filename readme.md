@@ -19,7 +19,7 @@ Because it's like... You know, collision resolution? To resolve a collision? So.
 
 ## Why did you create resolv?
 
-Because I was making games and frequently found that most frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games.
+Because I was making games and frequently found that most frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games. Note that Resolv is generally recommended for use for simpler games with non-grid-based objects. If your game has objects already contained in or otherwise aligned to a 2D array, then it would most likely be more efficient to use that array for collision detection instead of using Resolv.
 
 ## How do I install it?
 
@@ -115,24 +115,24 @@ func Init() {
     // Create one rectangle - we'll say this one represents our player.
     playerRect = resolv.NewRectangle(40, 40, 16, 16)
 
-    // Note that we don't HAVE to add the Player Rectangle to the Space; this is only if we want it 
-    // to also be checked for collision testing and resolution within the Space by other Shapes.
+    /* Note that we don't HAVE to add the Player Rectangle to the Space; this is only if we
+    want it to also be checked for collision testing and resolution within the Space by 
+    other Shapes.*/
     space.Add(playerRect)
 
     // Now we're going to create some more Rectangles to represent level bounds.
     
-
     // We can also add multiple shapes in a single Add() call...
 
     space.Add(resolv.NewRectangle(16, 0, 320, 16),
-        resolv.NewRectangle(16, 240-16, 320, 16),
+        resolv.NewRectangle(16, 16, 320, 16),
         resolv.NewRectangle(16, 240-16, 320, 16),
         resolv.NewRectangle(320-16, 16, 16, 240-16)
     )
 
-    /* Note that this is a bit verbose - in reality, you'd probably be loading the necessary data 
-    to construct the Shapes by looping through a for-loop when reading data in from a level format,
-    like Tiled's TMX format. Anyway...*/
+    // Note that this is a bit verbose - in reality, you'd probably be loading the necessary data 
+    // to construct the Shapes by looping through a for-loop when reading data in from a 
+    // level format, like Tiled's TMX format. Anyway...
 
     // A Space also has the ability to easily add tags to its Shapes.
     space.AddTags("solid")
@@ -147,10 +147,10 @@ func Update() {
     dx := 4
     dy := 4
 
-    /* To check for Shapes with a specific tag, we can filter out the Space they exist 
-    in with either the Space.FilterByTags() or Space.Filter() functions. Space.Filter() 
-    allows us to provide a function to filter out the Shapes; Space.FilterByTags() 
-    takes tags themselves to filter out the Shapes by. */
+    // To check for Shapes with a specific tag, we can filter out the Space they exist 
+    // in with either the Space.FilterByTags() or Space.Filter() functions. Space.Filter() 
+    // allows us to provide a function to filter out the Shapes; Space.FilterByTags() 
+    // takes tags themselves to filter out the Shapes by.
 
     // This gives us just the Shapes with the "solid" tag.
     solids := space.FilterByTags("solid")
@@ -158,11 +158,11 @@ func Update() {
     // You can provide multiple tags in the same function to filter by all of them at the same
     // time, as well. ( i.e. deathZones := space.FilterByTags("danger", "zone") )
 
-    /* Now we check each axis individually against the Space (or, in other words, against
-    all Shapes conatined within the Space). This is done to allow a collision on one 
-    axis to not stop movement on the other as necessary. Note that Space.Resolve() 
-    takes the checking Shape as the first argument, and returns the first collision 
-    that it comes into contact with.*/
+    // Now we check each axis individually against the Space (or, in other words, against
+    // all Shapes conatined within the Space). This is done to allow a collision on one 
+    // axis to not stop movement on the other as necessary. Note that Space.Resolve() 
+    // takes the checking Shape as the first argument, and returns the first collision 
+    // that it comes into contact with.
 
     collision := solids.Resolve(playerRect, dx, 0)
 
@@ -186,7 +186,22 @@ func Update() {
 
 ```
 
-Also note that a Space itself satisfies the requirements for a Shape, so they can be checked against like any other Shape. This works like a complex Shape composed of smaller Shapes, where doing collision testing and resolution simply does the equivalent functions for each Shape contained within the Space. This means that you can make complex Shapes out of simple Shapes easily by adding them to a Space, and then using that Space wherever you would use a normal Shape.
+Shapes also have functions to get and set a pointer to a data object (of type `interface{}` ), which can be used to point to a user-created object, like a GameObject or Player struct.
+
+```go
+type Player struct {
+    Rect *resolv.Rectangle
+}
+
+func Init() {
+    player := &Player{ Rect: resolv.newRectangle(0, 0, 16, 16) }
+    player.Rect.SetData(player) 
+    // Now if we ever need to get a reference to the Player from its Rect, we 
+    // can do so by using the Rectangle's GetData() function. 
+}
+```
+
+Also of interest, a Space itself satisfies the requirements for a Shape, so they can be checked against like any other Shape. This works like a complex Shape composed of smaller Shapes, where doing collision testing and resolution simply does the equivalent functions for each Shape contained within the Space. This means that you can make complex Shapes out of simple Shapes easily by adding them to a Space, and then using that Space wherever you would use a normal Shape.
 
 ```go
 
@@ -217,9 +232,9 @@ func Init() {
 
 func Update() {
 
-    /* To make using Spaces as compound Shapes easier, you can use the Space's Move() 
-    function to move all Shapes contained within the Space by the specified delta
-    X and Y values. */
+    // To make using Spaces as compound Shapes easier, you can use the Space's Move() 
+    // function to move all Shapes contained within the Space by the specified delta
+    // X and Y values.
 
     ship.Move(2, 0)
 
@@ -227,7 +242,13 @@ func Update() {
 
     // Now this line will run if any bullet touches any part of our ship Space.
     if bullets.IsColliding(ship) {
-        fmt.Println("OW!")
+        fmt.Println("OW! I ran into a bullet!")
+    }
+
+    // There are additional functions present in the Space struct to assist with finding
+    // colliding objects, as well:
+    for _, bullet := range bullets.getCollidingShapes(ship) {
+        fmt.Println(bullet)
     }
 
 }

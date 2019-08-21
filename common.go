@@ -42,6 +42,8 @@ func NewSquare(space *resolv.Space) *Square {
 
 	square.Rect.AddTags("square", "solid")
 
+	// We set a pointer to the square on the Rect itself so if another Shape has a collision with it, we can check the data pointer to see
+	// what the struct is.
 	square.Rect.SetData(square)
 
 	return square

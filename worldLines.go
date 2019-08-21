@@ -110,8 +110,8 @@ func (w *WorldLines) Draw() {
 		DrawText(32, 16, "-Line collision test-",
 			"Click to place the line's start.",
 			"Move the mouse to place the end point.",
-			"The line turns red when it touches",
-			"something.",
+			"The line turns red when it is",
+			"intersecting something.",
 			"Press F1 to hide this text.")
 
 		DrawText(160, 130, "This square is made out of",

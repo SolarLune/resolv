@@ -54,7 +54,7 @@ func (c *Circle) IsColliding(other Shape) bool {
 
 }
 
-// WouldBeColliding returns whether the Rectangle would be colliding with the specified other Shape if it were to move
+// WouldBeColliding returns whether the Circle would be colliding with the specified other Shape if it were to move
 // in the specified direction.
 func (c *Circle) WouldBeColliding(other Shape, dx, dy int32) bool {
 	c.X += dx

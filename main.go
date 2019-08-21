@@ -28,6 +28,7 @@ func main() {
 		&WorldLines{},
 		&WorldPlatformer{},
 		&WorldCompound{},
+		&WorldShooter{},
 	}
 
 	for _, world := range worlds {

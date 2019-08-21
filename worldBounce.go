@@ -49,43 +49,43 @@ func (w *WorldBounce) Update() {
 
 	solids := w.Space.FilterByTags("solid")
 
-	for _, Square := range w.Squares {
+	for _, square := range w.Squares {
 
-		Square.SpeedY += 0.25
-		Square.BounceFrame *= .9
+		square.SpeedY += 0.25
+		square.BounceFrame *= .9
 
-		if Square.SpeedY > float32(cell) {
-			Square.SpeedY = float32(cell)
-		} else if Square.SpeedY < -float32(cell) {
-			Square.SpeedY = -float32(cell)
+		if square.SpeedY > float32(cell) {
+			square.SpeedY = float32(cell)
+		} else if square.SpeedY < -float32(cell) {
+			square.SpeedY = -float32(cell)
 		}
 
-		if Square.SpeedX > float32(cell) {
-			Square.SpeedX = float32(cell)
-		} else if Square.SpeedX < -float32(cell) {
-			Square.SpeedX = -float32(cell)
+		if square.SpeedX > float32(cell) {
+			square.SpeedX = float32(cell)
+		} else if square.SpeedX < -float32(cell) {
+			square.SpeedX = -float32(cell)
 		}
 
 		// The additional teleporting check means that it won't resolve in a way that would cause it to move inordinately far (i.e.
 		// teleporting). See the docs in resolv.go to see exactly what Teleporting is defined as.
-		if res := solids.Resolve(Square.Rect, int32(Square.SpeedX), 0); res.Colliding() && !res.Teleporting {
-			Square.Rect.X += res.ResolveX
-			Square.SpeedX *= -1
-			Square.BounceFrame = 1
+		if res := solids.Resolve(square.Rect, int32(square.SpeedX), 0); res.Colliding() && !res.Teleporting {
+			square.Rect.X += res.ResolveX
+			square.SpeedX *= -1
+			square.BounceFrame = 1
 		} else {
-			Square.Rect.X += int32(Square.SpeedX)
+			square.Rect.X += int32(square.SpeedX)
 		}
 
-		if res := solids.Resolve(Square.Rect, 0, int32(Square.SpeedY)); res.Colliding() && !res.Teleporting {
-			Square.Rect.Y += res.ResolveY
-			Square.SpeedY *= -1
-			// This makes the Squares able to rebound higher if they get a boost from another Square below~
-			if Square.SpeedY < 0 && Square.SpeedY > -5 {
-				Square.SpeedY = -5
+		if res := solids.Resolve(square.Rect, 0, int32(square.SpeedY)); res.Colliding() && !res.Teleporting {
+			square.Rect.Y += res.ResolveY
+			square.SpeedY *= -1
+			// This makes the squares able to rebound higher if they get a boost from another square below~
+			if square.SpeedY < 0 && square.SpeedY > -5 {
+				square.SpeedY = -5
 			}
-			Square.BounceFrame = 1
+			square.BounceFrame = 1
 		} else {
-			Square.Rect.Y += int32(Square.SpeedY)
+			square.Rect.Y += int32(square.SpeedY)
 		}
 
 	}
