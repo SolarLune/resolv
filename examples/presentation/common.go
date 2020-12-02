@@ -3,9 +3,8 @@ package main
 import (
 	"math/rand"
 
+	"github.com/SolarLune/resolv"
 	rl "github.com/gen2brain/raylib-go/raylib"
-
-	"github.com/SolarLune/resolv/resolv"
 )
 
 type WorldInterface interface {

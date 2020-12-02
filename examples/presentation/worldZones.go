@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/SolarLune/resolv/resolv"
+	"github.com/SolarLune/resolv"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 

@@ -1,11 +1,10 @@
-
 # resolv
 
 ![Bouncing](https://thumbs.gfycat.com/UnhappySadEquine-size_restricted.gif)
 
 [Other gifs](https://gfycat.com/@solarlune/collections/LxBK2KGU/resolv-gfys)
 
-[GoDocs](https://godoc.org/github.com/SolarLune/resolv/resolv)
+[GoDocs](https://godoc.org/github.com/SolarLune/resolv)
 
 ## What is resolv?
 
@@ -257,7 +256,7 @@ func Update() {
 
 Welp, that's about it. If you want to see more info, feel free to examine the main.go and world#.go tests to see how a couple of quick example tests are set up.
 
-[You can check out the GoDoc link here, as well.](https://godoc.org/github.com/SolarLune/resolv/resolv)
+[You can check out the GoDoc link here, as well.](https://godoc.org/github.com/SolarLune/resolv)
 
 ## Dependencies?
 
