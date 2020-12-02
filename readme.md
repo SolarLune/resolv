@@ -225,7 +225,7 @@ func Init() {
 
     // Make something to dodge!
     bullet := resolv.NewRectangle(64, 8, 2, 2)
-    bullet.SetTags("bullet")
+    bullet.AddTags("bullet")
     world.Add(bullet)
 
 }
@@ -247,7 +247,7 @@ func Update() {
 
     // There are additional functions present in the Space struct to assist with finding
     // colliding objects, as well:
-    for _, bullet := range bullets.getCollidingShapes(ship) {
+    for _, bullet := range *bullets.GetCollidingShapes(ship) {
         fmt.Println(bullet)
     }
 
