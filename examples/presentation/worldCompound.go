@@ -1,9 +1,8 @@
 package main
 
 import (
+	"github.com/SolarLune/resolv"
 	rl "github.com/gen2brain/raylib-go/raylib"
-
-	"github.com/SolarLune/resolv/resolv"
 )
 
 type WorldCompound struct {

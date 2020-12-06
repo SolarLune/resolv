@@ -3,9 +3,8 @@ package main
 import (
 	"math"
 
+	"github.com/SolarLune/resolv"
 	rl "github.com/gen2brain/raylib-go/raylib"
-
-	"github.com/SolarLune/resolv/resolv"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
