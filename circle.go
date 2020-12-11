@@ -5,11 +5,11 @@ import "fmt"
 // A Circle represents an ordinary circle, and has a radius, in addition to normal shape properties.
 type Circle struct {
 	BasicShape
-	Radius int32
+	Radius float64
 }
 
 // NewCircle returns a pointer to a new Circle object.
-func NewCircle(x, y, radius int32) *Circle {
+func NewCircle(x, y, radius float64) *Circle {
 	c := &Circle{Radius: radius}
 	c.X = x
 	c.Y = y
@@ -56,7 +56,7 @@ func (c *Circle) IsColliding(other Shape) bool {
 
 // WouldBeColliding returns whether the Circle would be colliding with the specified other Shape if it were to move
 // in the specified direction.
-func (c *Circle) WouldBeColliding(other Shape, dx, dy int32) bool {
+func (c *Circle) WouldBeColliding(other Shape, dx, dy float64) bool {
 	c.X += dx
 	c.Y += dy
 	isColliding := c.IsColliding(other)

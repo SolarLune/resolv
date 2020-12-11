@@ -11,8 +11,7 @@ package resolv
 // ShapeA is a pointer to the Shape that initiated the resolution check.
 // ShapeB is a pointer to the Shape that the colliding object collided with, if the Collision was successful.
 type Collision struct {
-	ResolveX, ResolveY int32
-	Teleporting        bool
+	ResolveX, ResolveY float64
 	ShapeA             Shape
 	ShapeB             Shape
 }

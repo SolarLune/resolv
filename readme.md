@@ -1,14 +1,14 @@
-# resolv
+# Resolv
 
 ![Bouncing](https://thumbs.gfycat.com/UnhappySadEquine-size_restricted.gif)
 
 [Other gifs](https://gfycat.com/@solarlune/collections/LxBK2KGU/resolv-gfys)
 
-[GoDocs](https://godoc.org/github.com/SolarLune/resolv)
+[Docs](https://pkg.go.dev/github.com/solarlune/resolv)
 
-## What is resolv?
+## What is Resolv?
 
-resolv is a library specifically created for simple arcade (non-realistic) collision detection and resolution for video games. resolv is created in the Go language, but the core concepts are very straightforward and could be easily adapted for use with other languages or game engines and frameworks.
+Resolv is a library specifically created for simple arcade (non-realistic) collision detection and resolution for video games. resolv is created in the Go language, but the core concepts are very straightforward and could be easily adapted for use with other languages or game engines and frameworks.
 
 Basically: It allows you to do simple physics easier, without it doing the physics part - that's still on you.
 
@@ -16,19 +16,19 @@ Basically: It allows you to do simple physics easier, without it doing the physi
 
 Because it's like... You know, collision resolution? To resolve a collision? So... That's the name. I juste took an e off because I misplaced it somewhere.
 
-## Why did you create resolv?
+## Why did you create Resolv?
 
 Because I was making games and frequently found that most frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games. Note that Resolv is generally recommended for use for simpler games with non-grid-based objects. If your game has objects already contained in or otherwise aligned to a 2D array, then it would most likely be more efficient to use that array for collision detection instead of using Resolv.
 
 ## How do I install it?
 
-It should be as simple as just go getting it and importing it in your game application.
+It should be as simple as just go getting it and importing it in your game application, or importing it and ensuring it's within your `go.mod` file.
 
-`go get github.com/SolarLune/resolv`
+`go get github.com/solarlune/resolv`
 
 ## How do I use it?
 
-There's two ways to use resolv. One way is to simply create two Shapes, and then check for a collision between them, or attempt to resolve a movement of one into the other, like below:
+There's two ways to use Resolv. One way is to simply create two Shapes, and then check for a collision between them, or attempt to resolve a movement of one into the other, like below:
 
 ```go
 
@@ -254,9 +254,9 @@ func Update() {
 
 ```
 
-Welp, that's about it. If you want to see more info, feel free to examine the main.go and world#.go tests to see how a couple of quick example tests are set up.
+Welp, that's about it. If you want to see more info, feel free to examine the examples folder.
 
-[You can check out the GoDoc link here, as well.](https://godoc.org/github.com/SolarLune/resolv)
+[You can check out the documentation here, as well.](https://pkg.go.dev/github.com/solarlune/resolv)
 
 ## Dependencies?
 

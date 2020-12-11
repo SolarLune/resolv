@@ -4,7 +4,7 @@ package resolv
 // exist in the same Space.
 type Shape interface {
 	IsColliding(Shape) bool
-	WouldBeColliding(Shape, int32, int32) bool
+	WouldBeColliding(Shape, float64, float64) bool
 	GetTags() []string
 	ClearTags()
 	AddTags(...string)
@@ -12,15 +12,15 @@ type Shape interface {
 	HasTags(...string) bool
 	GetData() interface{}
 	SetData(interface{})
-	GetXY() (int32, int32)
-	SetXY(int32, int32)
-	Move(int32, int32)
+	GetXY() (float64, float64)
+	SetXY(float64, float64)
+	Move(float64, float64)
 }
 
 // BasicShape isn't to be used directly; it just has some basic functions and data, common to all structs that embed it, like
 // position and tags. It is embedded in other Shapes.
 type BasicShape struct {
-	X, Y int32
+	X, Y float64
 	tags []string
 	Data interface{}
 }
@@ -93,18 +93,18 @@ func (b *BasicShape) SetData(data interface{}) {
 }
 
 // GetXY returns the position of the Shape.
-func (b *BasicShape) GetXY() (int32, int32) {
+func (b *BasicShape) GetXY() (float64, float64) {
 	return b.X, b.Y
 }
 
 // SetXY sets the position of the Shape.
-func (b *BasicShape) SetXY(x, y int32) {
+func (b *BasicShape) SetXY(x, y float64) {
 	b.X = x
 	b.Y = y
 }
 
 // Move moves the Shape by the delta X and Y values provided.
-func (b *BasicShape) Move(x, y int32) {
+func (b *BasicShape) Move(x, y float64) {
 	b.X += x
 	b.Y += y
 }

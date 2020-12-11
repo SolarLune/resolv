@@ -3,11 +3,11 @@ package resolv
 // Rectangle represents a rectangle.
 type Rectangle struct {
 	BasicShape
-	W, H int32
+	W, H float64
 }
 
 // NewRectangle creates a new Rectangle and returns a pointer to it.
-func NewRectangle(x, y, w, h int32) *Rectangle {
+func NewRectangle(x, y, w, h float64) *Rectangle {
 	r := &Rectangle{W: w, H: h}
 	r.X = x
 	r.Y = y
@@ -29,7 +29,7 @@ func (r *Rectangle) IsColliding(other Shape) bool {
 
 // WouldBeColliding returns whether the Rectangle would be colliding with the other Shape if it were to move in the
 // specified direction.
-func (r *Rectangle) WouldBeColliding(other Shape, dx, dy int32) bool {
+func (r *Rectangle) WouldBeColliding(other Shape, dx, dy float64) bool {
 	r.X += dx
 	r.Y += dy
 	isColliding := r.IsColliding(other)
@@ -39,7 +39,7 @@ func (r *Rectangle) WouldBeColliding(other Shape, dx, dy int32) bool {
 }
 
 // Center returns the center point of the Rectangle.
-func (r *Rectangle) Center() (int32, int32) {
+func (r *Rectangle) Center() (float64, float64) {
 
 	x := r.X + r.W/2
 	y := r.Y + r.H/2
