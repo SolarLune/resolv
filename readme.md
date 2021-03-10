@@ -264,6 +264,12 @@ For using resolv with your projects, there are no external dependencies. resolv 
 
 For the resolv tests, resolv requires raylib-go to handle input and draw the screen.
 
+## Known Issues
+
+Line-line collision works, but doesn't resolve movement properly if done on edges with non-perpendicular lines.
+
+Circle-line collisions aren't implemented yet.
+
 ## Shout-out Time!
 
 Massive thanks to the developer of raylib; it's an awesome framework, and simplifies things CONSIDERABLY. 

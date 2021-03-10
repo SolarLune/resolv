@@ -88,24 +88,23 @@ func (sp *Space) GetCollidingShapes(shape Shape) *Space {
 
 }
 
-// Resolve runs Resolve() using the checking Shape, checking against all other Shapes in the Space. The first Collision
-// that returns true is the Collision that gets returned.
-func (sp *Space) Resolve(checkingShape Shape, deltaX, deltaY float64) Collision {
+// Check checks for collisions between each Shape within the Space and the target Shape after attempting movement in the
+// specified direciton. The first Collision found is the Collision that gets returned.
+func (sp *Space) Check(target Shape, dx, dy float64) *MovementCheck {
 
-	res := Collision{}
+	collision := newMovementCheck(sp, target)
 
-	for _, other := range *sp {
+	for _, child := range *sp {
 
-		if other != checkingShape && checkingShape.WouldBeColliding(other, float64(deltaX), float64(deltaY)) {
-			res = Resolve(checkingShape, other, deltaX, deltaY)
-			if res.Colliding() {
-				break
+		if target != child {
+			if possible := child.Check(target, dx, dy); possible.Colliding() {
+				return possible
 			}
 		}
 
 	}
 
-	return res
+	return collision
 
 }
 
@@ -125,8 +124,10 @@ func (sp *Space) Filter(filterFunc func(Shape) bool) *Space {
 // FilterByTags filters a Space out, creating a new Space that has just the Shapes that have all of the specified tags.
 func (sp *Space) FilterByTags(tags ...string) *Space {
 	return sp.Filter(func(s Shape) bool {
-		if s.HasTags(tags...) {
-			return true
+		for _, tag := range tags {
+			if s.Tags().Has(tag) {
+				return true
+			}
 		}
 		return false
 	})
@@ -135,8 +136,10 @@ func (sp *Space) FilterByTags(tags ...string) *Space {
 // FilterOutByTags filters a Space out, creating a new Space that has just the Shapes that don't have all of the specified tags.
 func (sp *Space) FilterOutByTags(tags ...string) *Space {
 	return sp.Filter(func(s Shape) bool {
-		if s.HasTags(tags...) {
-			return false
+		for _, tag := range tags {
+			if s.Tags().Has(tag) {
+				return false
+			}
 		}
 		return true
 	})
@@ -169,74 +172,19 @@ compound Shapes themselves. Functions that should logically function on all Shap
 that return singular values look at the first shape as a "root" of sorts.
 */
 
-// WouldBeColliding returns true if any of the Shapes within the Space would be colliding should they move along the delta
-// X and Y values provided (dx and dy).
-func (sp *Space) WouldBeColliding(other Shape, dx, dy float64) bool {
-
-	for _, shape := range *sp {
-
-		if shape == other {
-			return false
-		}
-
-		if shape.WouldBeColliding(other, dx, dy) {
-			return true
-		}
-
-	}
-
-	return false
-
-}
-
-// GetTags returns the tag list of the first Shape within the Space. If there are no Shapes within the Space,
-// it returns an empty array of string type.
-func (sp *Space) GetTags() []string {
+func (sp *Space) Tags() *Tags {
 	if len(*sp) > 0 {
-		return (*sp)[0].GetTags()
+		return (*sp)[0].Tags()
 	}
-	return []string{}
+	return nil
 }
 
-// AddTags sets the provided tags on all Shapes contained within the Space.
-func (sp *Space) AddTags(tags ...string) {
-	for _, shape := range *sp {
-		shape.AddTags(tags...)
-	}
-}
-
-// RemoveTags removes the provided tags from all Shapes contained within the Space.
-func (sp *Space) RemoveTags(tags ...string) {
-	for _, shape := range *sp {
-		shape.RemoveTags(tags...)
-	}
-}
-
-// ClearTags removes all tags from all Shapes within the Space.
-func (sp *Space) ClearTags() {
-	for _, shape := range *sp {
-		shape.ClearTags()
-	}
-}
-
-// HasTags returns true if all of the Shapes contained within the Space have the tags specified.
-func (sp *Space) HasTags(tags ...string) bool {
-
-	for _, shape := range *sp {
-		if !shape.HasTags(tags...) {
-			return false
-		}
-	}
-	return true
-
-}
-
-// GetData returns the pointer to the object contained in the Data field of the first Shape within the Space. If there aren't
+// Data returns the pointer to the object contained in the Data field of the first Shape within the Space. If there aren't
 // any Shapes within the Space, it returns nil.
-func (sp *Space) GetData() interface{} {
+func (sp *Space) Data() interface{} {
 
 	if len(*sp) > 0 {
-		return (*sp)[0].GetData()
+		return (*sp)[0].Data()
 	}
 	return nil
 
@@ -251,25 +199,25 @@ func (sp *Space) SetData(data interface{}) {
 
 }
 
-// GetXY returns the X and Y position of the first Shape in the Space. If there aren't any Shapes within the Space, it
+// Position returns the X and Y position of the first Shape in the Space. If there aren't any Shapes within the Space, it
 // returns 0, 0.
-func (sp *Space) GetXY() (float64, float64) {
+func (sp *Space) Position() (float64, float64) {
 
 	if len(*sp) > 0 {
-		return (*sp)[0].GetXY()
+		return (*sp)[0].Position()
 	}
 	return 0, 0
 
 }
 
-// SetXY sets the X and Y position of all Shapes within the Space to the position provided using the first Shape's position as
+// SetPosition sets the X and Y position of all Shapes within the Space to the position provided using the first Shape's position as
 // reference. Basically, it moves the first Shape within the Space to the target location and then moves all other Shapes
 // by the same delta movement.
-func (sp *Space) SetXY(x, y float64) {
+func (sp *Space) SetPosition(x, y float64) {
 
 	if len(*sp) > 0 {
 
-		dx, dy := (*sp)[0].GetXY()
+		dx, dy := (*sp)[0].Position()
 		dx = x - dx
 		dy = y - dy
 

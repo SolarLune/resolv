@@ -16,15 +16,30 @@ func NewCircle(x, y, radius float64) *Circle {
 	return c
 }
 
-// IsColliding returns true if the Circle is colliding with the specified other Shape, including the other Shape
-// being wholly within the Circle.
+// IsColliding returns if the Circle is colliding with the other Shape.
 func (c *Circle) IsColliding(other Shape) bool {
+	return c.Check(other, 0, 0).Colliding()
+}
+
+// Check returns a MovementCheck object for a proposed movement from the
+func (c *Circle) Check(other Shape, dx, dy float64) *MovementCheck {
+
+	col := newMovementCheck(c, other)
 
 	switch b := other.(type) {
 
 	case *Circle:
-		return Distance(c.X, c.Y, b.X, b.Y) <= c.Radius+b.Radius
+
+		d := Distance(c.X, c.Y, b.X, b.Y)
+
+		if d <= c.Radius+b.Radius {
+			col.addPoint(c.X, c.Y)
+			// col.Dx, col.Dy
+		}
+
+	// return Distance(c.X, c.Y, b.X, b.Y) <= c.Radius+b.Radius
 	case *Rectangle:
+
 		closestX := c.X
 		closestY := c.Y
 
@@ -40,33 +55,26 @@ func (c *Circle) IsColliding(other Shape) bool {
 			closestY = b.Y + b.H
 		}
 
-		return Distance(c.X, c.Y, closestX, closestY) <= c.Radius
-	case *Line:
-		return b.IsColliding(c)
-	case *Space:
-		return b.IsColliding(c)
+		if Distance(c.X, c.Y, closestX, closestY) <= c.Radius {
+			col.addPoint(closestX, closestY)
+			// col.Dx, col.Dy
+		}
+
+		// case *Line:
+		// 	return b.IsColliding(c)
+		// case *Space:
+		// 	return b.IsColliding(c)
 
 	}
 
 	fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Circle ", c, "!")
 
-	return false
+	return col
 
 }
 
-// WouldBeColliding returns whether the Circle would be colliding with the specified other Shape if it were to move
-// in the specified direction.
-func (c *Circle) WouldBeColliding(other Shape, dx, dy float64) bool {
-	c.X += dx
-	c.Y += dy
-	isColliding := c.IsColliding(other)
-	c.X -= dx
-	c.Y -= dy
-	return isColliding
-}
-
-// GetBoundingRect returns a Rectangle which has a width and height of 2*Radius.
-func (c *Circle) GetBoundingRect() *Rectangle {
+// BoundingRectangle returns a Rectangle which has a width and height of 2*Radius (and so, contains the Circle).
+func (c *Circle) BoundingRectangle() *Rectangle {
 	r := &Rectangle{}
 	r.W = c.Radius * 2
 	r.H = c.Radius * 2
