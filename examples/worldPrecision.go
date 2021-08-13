@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/SolarLune/resolv"
-	"github.com/hajimehoshi/ebiten"
-	"github.com/hajimehoshi/ebiten/ebitenutil"
-	"github.com/hajimehoshi/ebiten/inpututil"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/solarlune/resolv"
 )
 
 type WorldPrecision struct {
-	Space        *resolv.Space
-	Game         *Game
-	Geometry     []*resolv.Object
-	MovingRect   *resolv.Object
-	ShowHelpText bool
+	Space              *resolv.Space
+	Game               *Game
+	Geometry           []*resolv.Object
+	MovingRect         *resolv.Object
+	ShowHelpText       bool
+	PreciseCollisionOn bool
 }
 
 func NewWorldPrecision(g *Game) *WorldPrecision {
@@ -30,51 +31,61 @@ func (world *WorldPrecision) Init() {
 	gh := float64(world.Game.Height)
 	cellSize := 32
 
-	world.Space = resolv.NewSpace(int(gw)/cellSize, int(gh)/cellSize, cellSize, cellSize)
+	world.Space = resolv.NewSpace(int(gw), int(gh), cellSize, cellSize)
 
 	world.Geometry = []*resolv.Object{
-		resolv.NewObject(0, 0, 16, gh, world.Space),
-		resolv.NewObject(gw-16, 0, 16, gh, world.Space),
-		resolv.NewObject(0, 0, gw, 16, world.Space),
-		resolv.NewObject(0, gh-24, gw, 32, world.Space),
-		resolv.NewObject(320, 185, 19, 1600, world.Space),
+		resolv.NewObject(0, 0, 16, gh),
+		resolv.NewObject(gw-16, 0, 16, gh),
+		resolv.NewObject(0, 0, gw, 16),
+		resolv.NewObject(0, gh-24, gw, 32),
+		resolv.NewObject(320, 185, 19, 1600),
 	}
 
-	world.MovingRect = resolv.NewObject(320, 32, 16, 16, world.Space)
-	world.MovingRect.PreciseCollision = true
+	world.Space.Add(world.Geometry...)
+
+	world.MovingRect = resolv.NewObject(320, 32, 16, 16)
+	world.Space.Add(world.MovingRect)
+	// world.MovingRect.PreciseCollision = true
 
 	// world.Bouncers = []*Bouncer{}
 
 	// world.SpawnObject()
 }
 
-func (world *WorldPrecision) Update(screen *ebiten.Image) {
+func (world *WorldPrecision) Update() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		world.ShowHelpText = !world.ShowHelpText
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
-		precise := !world.MovingRect.PreciseCollision
-		world.Init()
-		world.MovingRect.PreciseCollision = precise
+		world.PreciseCollisionOn = !world.PreciseCollisionOn
+		world.Init() // Restart the world
 	}
 
 	dy := 2.0
 
 	if col := world.MovingRect.Check(0, dy); col.Valid() {
-		world.MovingRect.Y += col.ContactY
-	} else {
-		world.MovingRect.Y += dy
+
+		if world.PreciseCollisionOn {
+
+			if other := col.Objects()[0].ToRectangle().Intersection(world.MovingRect.ToRectangle()); other.Valid {
+				dy = -other.Vector[1]
+			}
+
+		} else {
+			dy = col.Contact.Vector[1]
+		}
+
 	}
+
+	world.MovingRect.Y += dy
 
 	world.MovingRect.Update()
 
 }
 
 func (world *WorldPrecision) Draw(screen *ebiten.Image) {
-
-	screen.Fill(color.RGBA{20, 20, 40, 255})
 
 	for _, o := range world.Geometry {
 		ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, color.RGBA{60, 60, 60, 255})
@@ -91,15 +102,15 @@ func (world *WorldPrecision) Draw(screen *ebiten.Image) {
 
 		world.Game.DrawText(screen, 16, 16,
 			"~ Precision Demo ~",
+			"",
+			fmt.Sprint("Precise Collision: ", world.PreciseCollisionOn),
+			"",
+			"For precise collisions, one can use resolv's built-in shape-checking functions ",
+			"to see if a true collision happens between objects within the same Cell.",
+			"Otherwise, objects collide based on overall cellular locations.",
+			"",
 			"Space: Turn on or off precise collisions",
 			"on the moving red rectangle.",
-			"",
-			fmt.Sprint("Precise Collision: ", world.MovingRect.PreciseCollision),
-			"",
-			"When colliding precisely, objects collide based on",
-			"overlapping cellular locations AND objects' individual rectangles.",
-			"Otherwise, objects collide based on",
-			"overall cellular locations.",
 			"F1: Toggle Debug View",
 			"F2: Show / Hide help text",
 			"R: Restart world",

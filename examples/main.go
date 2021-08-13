@@ -1,22 +1,23 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"image/color"
-	"io/ioutil"
-	"path/filepath"
 	"time"
 
-	"github.com/SolarLune/resolv"
 	"github.com/golang/freetype/truetype"
-	"github.com/hajimehoshi/ebiten/ebitenutil"
-	"github.com/hajimehoshi/ebiten/inpututil"
-	"github.com/hajimehoshi/ebiten/text"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/solarlune/resolv"
 	"golang.org/x/image/font"
-
-	"github.com/hajimehoshi/ebiten"
 )
+
+//go:embed excel.ttf
+var excelFont []byte
 
 type Game struct {
 	Worlds        []WorldInterface
@@ -41,11 +42,10 @@ func NewGame() *Game {
 		NewWorldLineTest(g),
 		NewWorldBouncer(g),
 		NewWorldPrecision(g),
+		NewWorldShapeTest(g),
 	}
 
-	fontFile, _ := ioutil.ReadFile(filepath.Join("examples", "excel.ttf"))
-
-	fontData, _ := truetype.Parse(fontFile)
+	fontData, _ := truetype.Parse(excelFont)
 
 	g.FontFace = truetype.NewFace(fontData, &truetype.Options{Size: 10})
 
@@ -67,9 +67,17 @@ func NewGame() *Game {
 
 }
 
-func (g *Game) Update(screen *ebiten.Image) error {
+func (g *Game) Update() error {
 
 	var quit error
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
+		if ebiten.CurrentTPS() >= 60 {
+			ebiten.SetMaxTPS(6)
+		} else {
+			ebiten.SetMaxTPS(60)
+		}
+	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		g.Debug = !g.Debug
@@ -99,13 +107,14 @@ func (g *Game) Update(screen *ebiten.Image) error {
 		quit = errors.New("quit")
 	}
 
-	world.Update(screen)
+	world.Update()
 
 	return quit
 
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	screen.Fill(color.RGBA{20, 20, 40, 255})
 	g.Worlds[g.CurrentWorld].Draw(screen)
 }
 

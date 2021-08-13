@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/hajimehoshi/ebiten/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/kvartborg/vector"
 
-	"github.com/SolarLune/resolv"
-	"github.com/hajimehoshi/ebiten"
-	"github.com/hajimehoshi/ebiten/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/solarlune/resolv"
 )
 
 type WorldLineTest struct {
@@ -33,28 +33,33 @@ func (world *WorldLineTest) Init() {
 
 	cellSize := 8
 
-	world.Space = resolv.NewSpace(int(gw)/cellSize, int(gh)/cellSize, cellSize, cellSize)
+	world.Space = resolv.NewSpace(int(gw), int(gh), cellSize, cellSize)
 
 	// Construct geometry
-	resolv.NewObject(0, 0, 16, gh, world.Space)
-	resolv.NewObject(gw-16, 0, 16, gh, world.Space)
-	resolv.NewObject(0, 0, gw, 16, world.Space)
-	resolv.NewObject(0, gh-24, gw, 32, world.Space)
-	resolv.NewObject(0, gh-24, gw, 32, world.Space)
+	geometry := []*resolv.Object{
 
-	resolv.NewObject(200, -160, 16, gh, world.Space)
+		resolv.NewObject(0, 0, 16, gh),
+		resolv.NewObject(gw-16, 0, 16, gh),
+		resolv.NewObject(0, 0, gw, 16),
+		resolv.NewObject(0, gh-24, gw, 32),
+		resolv.NewObject(0, gh-24, gw, 32),
 
-	for _, o := range world.Space.Objects {
-		o.AddTag("solid")
+		resolv.NewObject(200, -160, 16, gh),
 	}
 
-	world.Player = resolv.NewObject(160, 160, 16, 16, world.Space)
+	world.Space.Add(geometry...)
 
-	world.Player.AddTag("player")
+	for _, o := range world.Space.Objects {
+		o.AddTags("solid")
+	}
+
+	world.Player = resolv.NewObject(160, 160, 16, 16)
+	world.Player.AddTags("player")
+	world.Space.Add(world.Player)
 
 }
 
-func (world *WorldLineTest) Update(screen *ebiten.Image) {
+func (world *WorldLineTest) Update() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		world.ShowHelpText = !world.ShowHelpText
@@ -79,14 +84,14 @@ func (world *WorldLineTest) Update(screen *ebiten.Image) {
 		moveVec[0] += moveSpd
 	}
 
-	if col := world.Player.Check(moveVec[0], 0, "solid"); col.Valid() {
-		world.Player.X += col.ContactX
+	if col := world.Player.Check(moveVec[0], 0, "solid"); col != nil {
+		world.Player.X += col.ContactWithObject(col.Objects[0]).X
 	} else {
 		world.Player.X += moveVec[0]
 	}
 
-	if col := world.Player.Check(0, moveVec[1], "solid"); col.Valid() {
-		world.Player.Y += col.ContactY
+	if col := world.Player.Check(0, moveVec[1], "solid"); col != nil {
+		world.Player.Y += col.ContactWithObject(col.Objects[1]).Y
 	} else {
 		world.Player.Y += moveVec[1]
 	}
@@ -96,8 +101,6 @@ func (world *WorldLineTest) Update(screen *ebiten.Image) {
 }
 
 func (world *WorldLineTest) Draw(screen *ebiten.Image) {
-
-	screen.Fill(color.RGBA{20, 20, 40, 255})
 
 	for _, o := range world.Space.Objects {
 		drawColor := color.RGBA{60, 60, 60, 255}
@@ -140,6 +143,10 @@ func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 			float64(world.Space.CellWidth),
 			float64(world.Space.CellHeight),
 			drawColor)
+
+		if interrupted {
+			break
+		}
 
 	}
 

@@ -5,32 +5,34 @@ import (
 	"image/color"
 	"math"
 
-	"github.com/hajimehoshi/ebiten/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
 
-	"github.com/SolarLune/resolv"
-	"github.com/hajimehoshi/ebiten"
-	"github.com/hajimehoshi/ebiten/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/solarlune/resolv"
 )
 
 type Player struct {
-	Object          *resolv.Object
-	GroundDetection *resolv.Object
-	SpeedX          float64
-	SpeedY          float64
-	OnGround        bool
-	WallSliding     *resolv.Object
-	FacingRight     bool
-	IgnorePlatform  *resolv.Object
+	Object         *resolv.Object
+	SpeedX         float64
+	SpeedY         float64
+	OnGround       *resolv.Object
+	WallSliding    *resolv.Object
+	FacingRight    bool
+	IgnorePlatform *resolv.Object
 }
 
 func NewPlayer(space *resolv.Space) *Player {
+
 	p := &Player{
-		Object:          resolv.NewObject(32, 128, 16, 24, space),
-		GroundDetection: resolv.NewObject(32, 128, 16, 1, space),
-		FacingRight:     true,
+		Object:      resolv.NewObject(32, 128, 16, 24),
+		FacingRight: true,
 	}
+
+	space.Add(p.Object)
+
 	return p
 }
 
@@ -58,47 +60,71 @@ func (world *WorldPlatformer) Init() {
 	gw := float64(world.Game.Width)
 	gh := float64(world.Game.Height)
 
-	world.Space = resolv.NewSpace(int(gw/16), int(gh/16), 16, 16)
+	world.Space = resolv.NewSpace(int(gw), int(gh), 16, 16)
 
 	// Construct geometry
-	resolv.NewObject(0, 0, 16, gh, world.Space)
-	resolv.NewObject(gw-16, 0, 16, gh, world.Space)
-	resolv.NewObject(0, 0, gw, 16, world.Space)
-	resolv.NewObject(0, gh-24, gw, 32, world.Space)
-	resolv.NewObject(160, gh-56, 160, 32, world.Space)
-	resolv.NewObject(320, 64, 32, 160, world.Space)
-	resolv.NewObject(64, 128, 16, 160, world.Space)
-	resolv.NewObject(gw-128, 64, 128, 16, world.Space)
-	resolv.NewObject(gw-128, gh-88, 128, 16, world.Space)
+	world.Space.Add(
+		resolv.NewObject(0, 0, 16, gh),
+		resolv.NewObject(gw-16, 0, 16, gh),
+		resolv.NewObject(0, 0, gw, 16),
+		resolv.NewObject(0, gh-24, gw, 32),
+		resolv.NewObject(160, gh-56, 160, 32),
+		resolv.NewObject(320, 64, 32, 160),
+		resolv.NewObject(64, 128, 16, 160),
+		resolv.NewObject(gw-128, 64, 128, 16),
+		resolv.NewObject(gw-128, gh-88, 128, 16),
+	)
 
 	for _, o := range world.Space.Objects {
-		o.AddTag("solid")
+		o.AddTags("solid")
 	}
 
 	world.Player = NewPlayer(world.Space)
-	world.Player.Object.PreciseCollision = true
 
-	world.FloatingPlatform = resolv.NewObject(128, gh-32, 128, 8, world.Space)
-	world.FloatingPlatform.AddTag("platform")
+	world.FloatingPlatform = resolv.NewObject(128, gh-32, 128, 8)
+	world.FloatingPlatform.AddTags("platform")
 	world.FloatingPlatformTween = gween.NewSequence()
 	world.FloatingPlatformTween.Add(
 		gween.New(float32(world.FloatingPlatform.Y), float32(world.FloatingPlatform.Y-128), 2, ease.Linear),
 		gween.New(float32(world.FloatingPlatform.Y-128), float32(world.FloatingPlatform.Y), 2, ease.Linear),
 	)
 
+	world.Space.Add(world.FloatingPlatform)
+
 	// Platforms
-	resolv.NewObject(352, 64, 48, 8, world.Space).AddTag("platform")
-	resolv.NewObject(352, 64+64, 48, 8, world.Space).AddTag("platform")
-	resolv.NewObject(352, 64+128, 48, 8, world.Space).AddTag("platform")
-	resolv.NewObject(352, 64+192, 48, 8, world.Space).AddTag("platform")
+	platforms := []*resolv.Object{
+		resolv.NewObject(352, 64, 48, 8),
+		resolv.NewObject(352, 64+64, 48, 8),
+		resolv.NewObject(352, 64+128, 48, 8),
+		resolv.NewObject(352, 64+192, 48, 8),
+	}
+	for _, platform := range platforms {
+		platform.AddTags("platform")
+	}
+
+	world.Space.Add(platforms...)
 
 	// Ramps
-	resolv.NewObject(320, gh-56, 16, 16, world.Space).AddTag("ramp")
-	resolv.NewObject(336, gh-40, 16, 16, world.Space).AddTag("ramp")
+	ramps := []*resolv.Object{
+		resolv.NewObject(320, gh-56, 16, 16),
+		resolv.NewObject(336, gh-40, 16, 16),
+	}
+
+	for _, ramp := range ramps {
+		ramp.AddTags("ramp")
+	}
+
+	world.Space.Add(ramps...)
 
 }
 
-func (world *WorldPlatformer) Update(screen *ebiten.Image) {
+func (world *WorldPlatformer) Update() {
+
+	// fmt.Println(ebiten.GamepadIDs())
+
+	// for i := ebiten.GamepadID; i < 16; i++ {
+	// 	fmt.Println(ebiten.GamepadName(i), ebiten.GamepadAxisNum(0), ebiten.GamepadButtonNum(0), ebiten.GamepadSDLID(0))
+	// }
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		world.ShowHelpText = !world.ShowHelpText
@@ -127,12 +153,12 @@ func (world *WorldPlatformer) Update(screen *ebiten.Image) {
 	}
 
 	if player.WallSliding == nil {
-		if ebiten.IsKeyPressed(ebiten.KeyRight) {
+		if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.GamepadAxis(0, 0) > 0.1 {
 			player.SpeedX += accel
 			player.FacingRight = true
 		}
 
-		if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.GamepadAxis(0, 0) < -0.1 {
 			player.SpeedX -= accel
 			player.FacingRight = false
 		}
@@ -152,24 +178,15 @@ func (world *WorldPlatformer) Update(screen *ebiten.Image) {
 		player.SpeedX = -maxSpeed
 	}
 
-	platformCheck := player.Object.Check(0, player.SpeedY+1, "platform")
-	var platform *resolv.Object
-	if len(platformCheck.ObjectsByTags("platform")) > 0 {
-		platform = platformCheck.ObjectsByTags("platform")[0]
-		if platform.Y < player.Object.Y+player.Object.H-4 {
-			platform = nil
-		}
-	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) || ebiten.IsGamepadButtonPressed(0, 0) || ebiten.IsGamepadButtonPressed(1, 0) {
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxis(0, 1) > 0.1 || ebiten.GamepadAxis(1, 1) > 0.1) && player.OnGround != nil && player.OnGround.HasTags("platform") {
 
-		if ebiten.IsKeyPressed(ebiten.KeyDown) && platform != nil {
-
-			player.IgnorePlatform = platform
+			player.IgnorePlatform = player.OnGround
 
 		} else {
 
-			if player.OnGround {
+			if player.OnGround != nil {
 				player.SpeedY = -jumpSpd
 			} else if player.WallSliding != nil {
 				// WALLJUMPING
@@ -192,46 +209,74 @@ func (world *WorldPlatformer) Update(screen *ebiten.Image) {
 	// Platform check is done early because we need to 1) prioritize standing on platforms if they can move beneath solid objects like
 	// in this example, and we need to know if a platform is ignored or not before standing on it
 
-	if platform != nil && platform != player.IgnorePlatform && player.SpeedY >= 0 {
-		player.Object.Y += platformCheck.ContactY
-		player.SpeedY = 0
-		player.OnGround = true
-		player.WallSliding = nil
+	player.OnGround = nil
+	dy := player.SpeedY
 
-	} else if check := player.Object.Check(0, player.SpeedY, "ramp"); check.Valid() && player.SpeedY >= 0 {
-		ramp := check.Objects()[0]
-		dx := math.Abs(player.Object.X-ramp.X-ramp.W) / ramp.W
-		dx += 0.1
-		if dx > 1 {
-			dx = 1
-		} else if dx < 0 {
-			dx = 0
-		}
+	// Lock vertical movement to a maximum of the size of the grid so we don't miss any collisions
+	dy = math.Max(math.Min(dy, 16), -16)
 
-		player.Object.SetBottom(ramp.Y + ramp.H)
-		player.Object.Y -= dx * ramp.H
-		player.SpeedY = 0
-		player.OnGround = true
-		player.WallSliding = nil
+	if check := player.Object.Check(0, dy, "solid"); check.Valid() {
 
-	} else if check := player.Object.Check(0, player.SpeedY, "solid"); check.Valid() {
-		if player.SpeedY < 0 && check.CanSlide && math.Abs(check.SlideX) < 8 {
-			player.Object.X += check.SlideX // This allows you to slide around a block if you're just baaarely off
+		if dy < 0 && check.Slide.Valid && math.Abs(check.Slide.Vector[0]) < 8 {
+			player.Object.X += check.Slide.Vector[0] // This allows you to slide around a block if you're just baaarely off
 		} else {
-			player.Object.Y += check.ContactY // Move to contact with the surface; ContactY takes into account the size of the Player automatically
+			// Move to contact with the surface; ContactY takes into account the size of the Player automatically
+			dy = check.Contact.Vector[1]
 			player.SpeedY = 0
-			player.OnGround = true
+			player.OnGround = check.Objects()[0]
 			player.WallSliding = nil
+
+			if player.OnGround != player.IgnorePlatform {
+				player.IgnorePlatform = nil
+			}
+
 		}
-	} else {
-		player.Object.Y += player.SpeedY
-		player.OnGround = false
+
 	}
 
+	// for _, o := range check.Objects() {
+
+	// 	if o == player.Object {
+	// 		continue
+	// 	}
+
+	// 	fmt.Println(o.X, o.Y, o.Tags())
+
+	// 	if o.HasTags("solid") {
+
+	// 		if player.SpeedY < 0 && check.CanSlide && math.Abs(check.SlideX) < 8 {
+	// 			player.Object.X += check.SlideX // This allows you to slide around a block if you're just baaarely off
+	// 		} else {
+	// 			_, dy = check.ContactDelta() // Move to contact with the surface; ContactY takes into account the size of the Player automatically
+	// 			player.SpeedY = 0
+	// 			player.OnGround = o
+	// 			player.WallSliding = nil
+
+	// 			if player.OnGround != player.IgnorePlatform {
+	// 				player.IgnorePlatform = nil
+	// 			}
+
+	// 		}
+
+	// 	} else if o.HasTags("platform") {
+
+	// 		if player.SpeedY >= 0 && o.Y >= player.Object.Y+player.Object.H-4 && o != player.IgnorePlatform {
+	// 			dy = check.ContactY // Move to contact with the surface; ContactY takes into account the size of the Player automatically
+	// 			player.SpeedY = 0
+	// 			player.OnGround = o
+	// 			player.WallSliding = nil
+	// 		}
+
+	// 	}
+
+	// }
+
+	player.Object.Y += dy
+
 	if check := player.Object.Check(player.SpeedX, 0, "solid"); check.Valid() {
-		player.Object.X += check.ContactX
+		player.Object.X += check.Contact.Vector[0]
 		player.SpeedX = 0
-		if !player.OnGround {
+		if player.OnGround == nil {
 			player.WallSliding = check.ObjectsByTags("solid")[0]
 		}
 	} else {
@@ -248,17 +293,11 @@ func (world *WorldPlatformer) Update(screen *ebiten.Image) {
 		player.WallSliding = nil
 	}
 
-	if player.OnGround {
-		player.IgnorePlatform = nil
-	}
-
 	player.Object.Update() // Update the player's position in the space
 
 }
 
 func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
-
-	screen.Fill(color.RGBA{20, 20, 40, 255})
 
 	for _, o := range world.Space.Objects {
 		drawColor := color.RGBA{60, 60, 60, 255}

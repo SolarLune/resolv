@@ -1,31 +1,41 @@
 package resolv
 
 import (
+	"fmt"
+	"image"
+	"log"
 	"math"
 	"sort"
+
+	"github.com/kvartborg/vector"
 )
 
 // Object represents an object that can be spread across one or more Cells in a Space.
 type Object struct {
-	Space            *Space      // Reference to the Space the Object exists within
-	X, Y, W, H       float64     // Position and size of the Object in the Space
-	TouchingCells    []*Cell     // An array of Cells the Object is touching
-	tags             []string    // A list of tags the Object has
-	Data             interface{} // A pointer to a user-definable object
-	PreciseCollision bool        // Whether collisions are precise or if just using cellular positions are good enough.
+	Shape         Shape            // A shape for more specific collision-checking.
+	Space         *Space           // Reference to the Space the Object exists within
+	X, Y, W, H    float64          // Position and size of the Object in the Space
+	TouchingCells []*Cell          // An array of Cells the Object is touching
+	Data          interface{}      // A pointer to a user-definable object
+	ignoreList    map[*Object]bool // Set of Objects to ignore when checking for collisions
+	tags          []string         // A list of tags the Object has
 }
 
-// NewObject returns a new Object of the specified position and size, and which exists in the Space provided.
-func NewObject(x, y, w, h float64, space *Space) *Object {
+// NewObject returns a new Object of the specified position and size.
+func NewObject(x, y, w, h float64, tags ...string) *Object {
 	o := &Object{
-		X:     x,
-		Y:     y,
-		W:     w,
-		H:     h,
-		tags:  []string{},
-		Space: space,
+		X:          x,
+		Y:          y,
+		W:          w,
+		H:          h,
+		tags:       []string{},
+		ignoreList: map[*Object]bool{},
 	}
-	o.Update()
+
+	if len(tags) > 0 {
+		o.AddTags(tags...)
+	}
+
 	return o
 }
 
@@ -35,7 +45,7 @@ func (obj *Object) Update() {
 
 	if obj.Space != nil {
 
-		obj.Remove()
+		obj.Space.Remove(obj)
 
 		cx, cy, ex, ey := obj.ShapeToSpace(0, 0)
 
@@ -56,37 +66,23 @@ func (obj *Object) Update() {
 
 		obj.Space.Objects = append(obj.Space.Objects, obj)
 
+	} else {
+		log.Println("Warning: Object " + fmt.Sprintf("%v", obj) + " has no Space, Update() does nothing.")
+	}
+
+	if obj.Shape != nil {
+		obj.Shape.SetPosition(obj.X, obj.Y)
 	}
 
 }
 
-// Remove removes the Object from being associated with the Space. This should be done whenever an Object is removed from the
-// game.
-func (obj *Object) Remove() {
-
-	for _, cell := range obj.TouchingCells {
-		cell.unregister(obj)
-	}
-
-	obj.TouchingCells = []*Cell{}
-
-	for i, o := range obj.Space.Objects {
-		if o == obj {
-			obj.Space.Objects[i] = obj.Space.Objects[len(obj.Space.Objects)-1]
-			obj.Space.Objects = obj.Space.Objects[:len(obj.Space.Objects)-1]
-			break
-		}
-	}
-
-}
-
-// AddTag adds a tag to the Object.
-func (obj *Object) AddTag(tags ...string) {
+// AddTags adds tags to the Object.
+func (obj *Object) AddTags(tags ...string) {
 	obj.tags = append(obj.tags, tags...)
 }
 
-// RemoveTag removes a tag from the Object.
-func (obj *Object) RemoveTag(tags ...string) {
+// RemoveTags removes tags from the Object.
+func (obj *Object) RemoveTags(tags ...string) {
 
 	for _, tag := range tags {
 
@@ -103,29 +99,22 @@ func (obj *Object) RemoveTag(tags ...string) {
 
 }
 
-// HasTags indicates if an Object has all of the tags indicated.
+// HasTags indicates if an Object has any of the tags indicated.
 func (obj *Object) HasTags(tags ...string) bool {
 
 	for _, tag := range tags {
 
-		hasTag := false
-
 		for _, t := range obj.tags {
 
 			if t == tag {
-				hasTag = true
-				break
+				return true
 			}
 
 		}
 
-		if !hasTag {
-			return false
-		}
-
 	}
 
-	return true
+	return false
 
 }
 
@@ -189,15 +178,13 @@ func (obj *Object) SetBottom(y float64) {
 	obj.Y = y - obj.H
 }
 
-// Check checks movement for this object from its current position using the designated delta movement direction (dx, dy). tag indicates what tag objects in
-// cells that are detected must have for the cell to be returned in the check. A tag of "" indicates that any cell that has an object other than the calling
-// one is acceptable. Returns a CellCheck object containing this information. Note that the delta movement takes a minimum of 1 pixel movement in any direction
-// (a dx and dy of 0 is fine as well). This is to prevent jittering when moving.
-func (obj *Object) Check(dx, dy float64, tags ...string) Collision {
+// Check checks movement for this object from its current position in its Cell in Space using the designated delta movement (dx and dy). This is done by querying the containing Space's Cells
+// so one can see if a moving Object will collide with a cell that houses another Object - if so, Check returns a Collision. Exactly which objects trigger a Collision can be controled by means of specifying tags
+// that other objects must have. If no objects are found, this function returns nil.
+func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 
-	cc := Collision{
-		checkingObject: obj,
-	}
+	cc := NewCollision()
+	cc.checkingObject = obj
 
 	if dx < 0 {
 		dx = math.Min(dx, -1)
@@ -211,7 +198,12 @@ func (obj *Object) Check(dx, dy float64, tags ...string) Collision {
 		dy = math.Max(dy, 1)
 	}
 
+	cc.dx = dx
+	cc.dy = dy
+
 	cx, cy, ex, ey := obj.ShapeToSpace(dx, dy)
+
+	objectsAdded := map[*Object]bool{}
 
 	for y := cy; y <= ey; y++ {
 
@@ -221,23 +213,19 @@ func (obj *Object) Check(dx, dy float64, tags ...string) Collision {
 
 				for _, o := range c.Objects {
 
-					if o == obj {
+					// We only want cells that have objects other than the checking object, or that aren't on the ignore list.
+					if ignored := obj.ignoreList[o]; o == obj || ignored {
 						continue
 					}
 
-					// We only want cells that have objects other than the checking object.
+					if _, added := objectsAdded[o]; (len(tags) == 0 || o.HasTags(tags...)) && !added {
 
-					if len(tags) == 0 || c.ContainsTags(tags...) {
-
-						// We only want to add cells for collisions if the calling object's collision is imprecise OR they are and we aren't intersecting
-						if !obj.PreciseCollision || intersecting(obj.X+dx, obj.Y+dy, obj.W, obj.H, o.X, o.Y, o.W, o.H) {
-							cc.Cells = append(cc.Cells, c)
-							break
-						}
+						cc.Objects = append(cc.Objects, o)
+						objectsAdded[o] = true
+						continue
 
 					}
 
-					break
 				}
 
 			}
@@ -246,32 +234,62 @@ func (obj *Object) Check(dx, dy float64, tags ...string) Collision {
 
 	}
 
-	cells := cc.Cells[:]
-	ox := cc.checkingObject.X + (cc.checkingObject.W / 2)
-	oy := cc.checkingObject.Y + (cc.checkingObject.W / 2)
+	if len(cc.Objects) == 0 {
+		return nil
+	}
 
-	sort.Slice(cells, func(i, j int) bool {
+	// ox := cc.checkingObject.X + (cc.checkingObject.W / 2)
+	// oy := cc.checkingObject.Y + (cc.checkingObject.H / 2)
 
-		ix, iy := cc.checkingObject.Space.SpaceToWorld(cells[i].X, cells[i].Y)
-		jx, jy := cc.checkingObject.Space.SpaceToWorld(cells[j].X, cells[j].Y)
+	op := vector.Vector{cc.checkingObject.X + (cc.checkingObject.W / 2), cc.checkingObject.X + (cc.checkingObject.H / 2)}
 
-		return distance(ix, iy, ox, oy) < distance(jx, jy, ox, oy)
+	sort.Slice(cc.Objects, func(i, j int) bool {
+
+		// ix, iy := cc.checkingObject.Space.SpaceToWorld(cc.Cells[i].X, cc.Cells[i].Y)
+		// jx, jy := cc.checkingObject.Space.SpaceToWorld(cc.Cells[j].X, cc.Cells[j].Y)
+
+		return vector.Vector{float64(cc.Objects[i].X), float64(cc.Objects[i].Y)}.Sub(op).Magnitude() < vector.Vector{float64(cc.Objects[j].X), float64(cc.Objects[j].Y)}.Sub(op).Magnitude()
+
+		// return distance(ix, iy, ox, oy) < distance(jx, jy, ox, oy)
 
 	})
 
-	cc.calculateContactDelta(dx, dy)
-	cc.calculateSlideDelta(dx, dy, tags...)
+	// cc.calculateContactDelta()
+	// cc.calculateSlideDelta(tags...)
 
 	return cc
 
 }
 
-func intersecting(x, y, w, h, x2, y2, w2, h2 float64) bool {
-	return x > x2-w && y > y2-h && x < x2+w2 && y < y2+h2
+// AddToIgnoreList adds the specified Object to the Object's internal collision ignoral list. Cells that contain the specified Object will not be counted when calling Check().
+func (obj *Object) AddToIgnoreList(ignoreObj *Object) {
+	obj.ignoreList[ignoreObj] = true
 }
 
-// func (obj *Object) Intersecting(other *Object) bool {
+// RemoveFromIgnoreList removes the specified Object from the Object's internal collision ignoral list. Objects removed from this list will once again be counted for Check().
+func (obj *Object) RemoveFromIgnoreList(ignoreObj *Object) {
+	delete(obj.ignoreList, ignoreObj)
+}
 
-// 	return obj.X > other.X-obj.W && obj.Y > other.Y-obj.H && obj.X < other.X+other.W && obj.Y < other.Y+other.H
+func (obj *Object) ToImageRect() image.Rectangle {
+	return image.Rect(int(obj.X), int(obj.Y), int(obj.X+obj.W), int(obj.Y+obj.H))
+}
 
+// func (obj *Object) ToRectangle() *ConvexPolygon {
+// 	w := obj.W / 2
+// 	h := obj.H / 2
+// 	return NewConvexPolygon(
+// 		-w, -h,
+// 		w, -h,
+// 		w, h,
+// 		-w, h,
+// 	)
+// }
+
+// func (obj *Object) ToRectangle() *Rectangle {
+// 	return NewRectangle(obj.X, obj.Y, obj.W, obj.H)
+// }
+
+// func (obj *Object) ToPoint() *Vertex {
+// 	return NewVertex(obj.Center())
 // }

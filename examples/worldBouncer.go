@@ -7,10 +7,10 @@ import (
 
 	"github.com/kvartborg/vector"
 
-	"github.com/SolarLune/resolv"
-	"github.com/hajimehoshi/ebiten"
-	"github.com/hajimehoshi/ebiten/ebitenutil"
-	"github.com/hajimehoshi/ebiten/inpututil"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/solarlune/resolv"
 )
 
 type WorldBouncer struct {
@@ -44,14 +44,16 @@ func (world *WorldBouncer) Init() {
 	gh := float64(world.Game.Height)
 	cellSize := 8
 
-	world.Space = resolv.NewSpace(int(gw)/cellSize, int(gh)/cellSize, cellSize, cellSize)
+	world.Space = resolv.NewSpace(int(gw), int(gh), cellSize, cellSize)
 
 	world.Geometry = []*resolv.Object{
-		resolv.NewObject(0, 0, 16, gh, world.Space),
-		resolv.NewObject(gw-16, 0, 16, gh, world.Space),
-		resolv.NewObject(0, 0, gw, 16, world.Space),
-		resolv.NewObject(0, gh-24, gw, 32, world.Space),
+		resolv.NewObject(0, 0, 16, gh),
+		resolv.NewObject(gw-16, 0, 16, gh),
+		resolv.NewObject(0, 0, gw, 16),
+		resolv.NewObject(0, gh-24, gw, 32),
 	}
+
+	world.Space.Add(world.Geometry...)
 
 	world.Bouncers = []*Bouncer{}
 
@@ -62,9 +64,11 @@ func (world *WorldBouncer) Init() {
 func (world *WorldBouncer) SpawnObject() {
 
 	bouncer := &Bouncer{
-		Object: resolv.NewObject(0, 0, 2, 2, world.Space),
+		Object: resolv.NewObject(0, 0, 2, 2),
 		Speed:  vector.Vector{(rand.Float64() * 8) - 4, (rand.Float64() * 8) - 4},
 	}
+
+	world.Space.Add(bouncer.Object)
 
 	var c *resolv.Cell
 	for c == nil {
@@ -82,7 +86,7 @@ func (world *WorldBouncer) SpawnObject() {
 
 }
 
-func (world *WorldBouncer) Update(screen *ebiten.Image) {
+func (world *WorldBouncer) Update() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		world.ShowHelpText = !world.ShowHelpText
@@ -93,7 +97,7 @@ func (world *WorldBouncer) Update(screen *ebiten.Image) {
 	} else if ebiten.IsKeyPressed(ebiten.KeyDown) {
 		if len(world.Bouncers) > 0 {
 			b := world.Bouncers[0]
-			b.Object.Remove()
+			world.Space.Remove(b.Object)
 			world.Bouncers = world.Bouncers[1:]
 		}
 	}
@@ -102,16 +106,16 @@ func (world *WorldBouncer) Update(screen *ebiten.Image) {
 
 		b.Speed[1] += 0.1
 
-		if check := b.Object.Check(b.Speed[0], 0); check.Valid() {
+		if check := b.Object.Check(b.Speed[0], 0); check != nil {
 			b.Speed[0] *= -1
-			b.Object.X += check.ContactX
+			b.Object.X += check.ContactWithObject(check.Objects[0]).X
 		} else {
 			b.Object.X += b.Speed[0]
 		}
 
-		if check := b.Object.Check(0, b.Speed[1]); check.Valid() {
+		if check := b.Object.Check(0, b.Speed[1]); check != nil {
 			b.Speed[1] *= -1
-			b.Object.Y += check.ContactY
+			b.Object.Y += check.ContactWithObject(check.Objects[0]).Y
 		} else {
 			b.Object.Y += b.Speed[1]
 		}
@@ -123,8 +127,6 @@ func (world *WorldBouncer) Update(screen *ebiten.Image) {
 }
 
 func (world *WorldBouncer) Draw(screen *ebiten.Image) {
-
-	screen.Fill(color.RGBA{20, 20, 40, 255})
 
 	for _, o := range world.Geometry {
 		ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, color.RGBA{60, 60, 60, 255})

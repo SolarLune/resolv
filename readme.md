@@ -1,98 +1,108 @@
 
-# Resolv
+# Resolv v0.5
 
-GIF GOES HERE
-
-[Documentation](https://pkg.go.dev/github.com/SolarLune/resolv/resolv?tab=doc) (It's also, of course, documented directly in the code.)
+[pkg.go.dev](https://pkg.go.dev/github.com/solarlune/resolv/resolv?tab=doc)
 
 ## What is Resolv?
 
-Resolv is a collision detection library, specifically created for simple, arcade (non-realistic) collision detection and resolution for video games. Resolv is created in the Go language, but the core concepts are very straightforward and could be easily adapted for use with other languages or game engines and frameworks.
+Resolv is a 2D collision detection and resolution library, specifically created for simple, arcade (non-realistic) collision detection and resolution for video games. Resolv is written in Go, but the core concepts are fairly straightforward and could be easily adapted for use with other languages or game development frameworks.
 
-Basically: It allows you to do simple physics easier, without it doing the physics part - that's still on you.
+Basically: It allows you to do simple physics easier, without actually doing the physics part - that's still on you.
 
 ## Why is it called that?
 
-Because it's like... You know, collision resolution? To resolve a collision? So... That's the name. I juste took an e off because I misplaced it somewhere.
+Because it's like... You know, collision resolution? To **resolve** a collision? So... That's the name. I juste took an e off because I seem to have misplaced it.
 
 ## Why did you create resolv?
 
-Because I was making games and frequently found that most frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games. Note that Resolv is generally recommended for use for simpler games with non-grid-based objects. If your game has objects already contained in or otherwise aligned to a 2D array, then it would most likely be more efficient to use that array for collision detection instead of using Resolv.
+Because I was making games in Go and found that existing frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games; if you need realistic physics, you have other options like Box2D or something.
 
-## How do I install it?
+This actually used to be different; I decided to rework it to its current incarnation, and after a few attempts over several months, I got it to this state (which, I think, is largely better).
 
-It should be as simple as just go getting it and using it, or simply importing it in your game application if you're using Go modules.
+## How do I get it?
 
-`go get github.com/SolarLune/resolv`
+`go get github.com/solarlune/resolv`
 
 ## How do I use it?
 
-There's one relatively simple way to use resolv - create a Space, create Objects, update the Objects as they move, and check for collisions.
+There's a couple of ways to use Resolv. 
+
+Firstly, you can create a Space, create Objects, update the Objects as they move, and check for collisions / intersections. 
+
+In Resolv, a Space represents a limited, bounded area in which Objects are placed, and which is separated into even Cells of predetermined size. Each Object fills at least one Cell as long as it exists within the Space, and by checking its position against the Space, it can tell which Cells are occupied, and therefore, where objects are. By checking the Cells, one is able to detect collisions simply and efficiently - this is the broadphase portion of Resolv.
 
 ```go
 
 var space *resolv.Space
-var playerBody *resolv.Object
+var playerObj *resolv.Object
+
+// In the game's init loop, which runs once when the game / level starts...
 
 func Init() {
 
     // First, we want to create a Space. This represents the areas in our game world 
     // where objects can move about and check for collisions.
 
-    // The first two arguments represent our grid width and height, while the following two
-    // represent our cells' sizes. This grid represents how fine the collision detection is.
-    space = resolv.NewSpace(40, 20, 16, 16)
+    // The first two arguments represent our Space's width and height, while the following two
+    // represent our cells' sizes. The smaller the cells' sizes, the finer (and less efficient) the collision detection.
+    space = resolv.NewSpace(640, 480, 16, 16)
 
-    // Next, we can start creating things.
+    // Next, we can start creating things and adding it to the Space.
 
     // Here's some level geometry; we don't need to actually store it anywhere unless we plan on 
     // moving it around or reinstantiating it at any point AFTER removing it from the space.
-    
-    // NewObject takes the X, Y, width, and height of the object, and the space to put it in.
-    resolv.NewObject(0, 0, 1280, 16, space)
-    resolv.NewObject(0, 720-16, 1280, 16, space)
-    resolv.NewObject(0, 16, 16, 720-32, space)
-    resolv.NewObject(1280-16, 16, 16, 720-32, space)
+
+    // NewObject takes the X, Y, width, and height of the object.
+    space.Add(
+        resolv.NewObject(0, 0, 640, 16),
+        resolv.NewObject(0, 480-16, 640, 16),
+        resolv.NewObject(0, 16, 16, 480-16),
+        resolv.NewObject(640-16, 16, 16, 480-16),
+    )
 
     // We'll keep a reference to the player's body to move it later.
-    playerBody = resolv.NewObject(32, 32, 16, 16, space)
+    playerObj = resolv.NewObject(32, 32, 16, 16, space)
+
+    // Finally, we add the Object to the Space, and we're good to go!
+    space.Add(playerObj)
 
 }
 
+// Later on, in the game's update loop, which runs once per game frame...
+
 func Update() {
 
-    // Later on, in the game's update loop, which runs once per game frame...
-
-    // Let's say we are attempting to move the player to the right. Here's how we could do it.
-
+    // Let's say we are attempting to move the player to the right by 2 pixels. Here's how we could do it.
     dx := 2.0
 
-    // Here, we check to see if there's a collision if playerBody were to move to the right by 2 pixels. The function returns
-    // a Collision object.
+    // To start, we check to see if there would be a collision if playerObj were to move to the right by 2 pixels. The Check function returns
+    // a Collision object if so.
 
-    collision := playerBody.Check(dx, 0)
-
-    if collision.Valid() {
+    if collision := playerObj.Check(dx, 0); collision != nil {
         
-        // If there was a collision, then it was a valid collision, and the playerBody can't move fully to the right by 2. It came into contact 
-        // with an occupied Cell to the right, and the 'collision' variable now holds a Collision struct with helpful information, like how 
-        // far to move to be touching the cell to the right.
-        
-        // Here we just move the shape over to the right by the distance reported by the Collision struct so it'll come into contact 
-        // with the colliding Cell.
-        playerBody.X += collision.ContactX
+        // If there was a collision, the player's Object can't move fully to the right by 2.
 
-    } else {
-        // If there wasn't a collision, playerBody can move the full distance, so we simply apply the motion to the X coordinate.
-        playerBody.X += dx
+        // To resolve (haha) this collision, we probably want to move the player into contact with that Object. So, we call Collision.ContactToObject() on the first
+        // Object that we came into contact with (which is stored in the Collision). It will return a Delta object, which indicates how much distance to move in 
+        // to come into contact with the specified Object.
+        dx = collision.ContactWithObject(collision.Objects[0]).X
+
     }
 
-    // If this was for a platformer, you could then check this for the Y-axis as well.
+    // If there wasn't a collision, then dx will just be 2, as set above, and the movement will go through unimpeded.
+    playerObj.X += dx
 
-    // If you want to filter out types of Objects to check for, add tags on the objects you want to filter using Object.AddTags() 
-    // and specify them in the last arguments of Object.Check.
+    // Lastly, when we move an Object, we need to call Object.Update() so it can be updated within the Space as well. For static / unmoving Objects, this is
+    // unnecessary, as Object.Update() is called once when an Object is added to a Space.
+    playerObj.Update()
 
-    onlySolidHazardous := playerBody.Check(dx, 0, "hazard", "solid")
+    // If we were making a platformer, you could then check for the Y-axis as well - conceptually, this is decomposing movement into two separate axes,
+    // and is a familiar and well-used approach for handling movement in a standard tile-based platformer.
+
+    // If you want to filter out types of Objects to check for, add tags on the objects you want to filter using Object.AddTags(), or when the Object is created 
+    // with resolv.NewObject(), and specify them in Object.Check.
+
+    onlySolidHazardous := playerObj.Check(dx, 0, "hazard", "solid")
 
 }
 
@@ -100,30 +110,75 @@ func Update() {
 
 ```
 
-You can do much more than this with the provided API, but this is the basic concept.
+The second way to use Resolv is to check for a more accurate collision test by assigning two Objects Shapes, and then checking for the intersection delta between them. Checking for an intersection between Shapes internally performs separating axis theorum (SAT) collision testing, and represents the more inefficient narrow-phase portion of Resolv. If you can get by without doing Shape-based collision testing, it would be most performant to do so.
 
-## Wasn't this... different before?
+```go
 
-That is correct; Resolv did have more to it, initially. It had multiple object types and geometry tests, like line-line intersection. However, I was generally unhappy with it for a couple of reasons:
+playerObj *resolv.Object
+stairs *resolv.Object
+space *resolv.Space
 
-- Object positions were represented using integer numbers. This was pretty bad, as this made it difficult to make objects that moved gradually, using speeds stored in floats.
-- Relatively poor performance. It was fine for small games, but collision testing should be _extremely_ lightweight, especially considering how frequently objects in games need to collide. The previous iteration basically boiled down to _checking every shape that moves against every other moving shape_, which is, well, bad.
-- No concept of "physical space". Originally, each object existed independently of each other, and was not tied down to any spatial grid or partitioning system. This meant that the only real way to check a space for an object was to loop through every shape, again, to see if it collides with that point or area.
-- Relatively difficult to change and improve it, as my knowledge of high school-level geometry is lacking at best. (COUGH COUGH HACK SNEEZE)
+func Init() {
+    
+    space = resolv.NewSpace(640, 480, 16, 16)
 
-So, I decided to overhaul it; after several attempts and three separate attempts at revamps, I came up with this as a simple, but effective, improvement. It still does what the original version of Resolv did well; namely, being very simple and easy to use, and being made primarily for arcade game physics. It still stays out of your way, but now it's more performant and easier to use for actual use-cases. The codebase is also much smaller and simpler, which is nice.
+    // Create the Object as usual, but then...
+    playerObj = resolv.NewObject(32, 128, 16, 16)
+    // Assign the Object a Shape. A Rectangle is, for now, a convex polygon that's simply rectangular.
+    playerObj.Shape = resolv.NewRectangle(0, 0, 16, 16)
+    // Then we add the Object to the Space. Note that it's important that you do this last so that the Shape is properly updated. (You can also simply call Object.Update() later.)
+    space.Add(playerObj)
+
+    stairs = resolv.NewObject(96, 128, 16, 16)
+    // NewConvexPolygon() takes a series of float64 values indicating the X and Y positions of each vertex; the call below, for example, creates a triangle.
+    stairs.Shape = resolv.NewConvexPolygon(
+        16, 0, // (x, y) for the first vertex
+        16, 16, // (x, y) for the second vertex
+        0, 16, // (x, y) for the third.
+    )
+    // Note that the vertices are in clockwise order. They can be in whatever order as long as it's consistent throughout your application. NewRectangle creates
+    // the vertices in clockwise order.
+    space.Add(stairs)
+
+}
+
+func Update() {
+
+    dx := 1.0
+
+    // Shape.Intersection() returns the intersection between two Shapes (i.e. how far to move the calling shape to get it out).
+    if delta := playerObj.Shape.Intersection(stairs.Shape); delta != nil {
+        
+        // We are colliding with the stairs shape, so we can move according to the delta to get out of it.
+        dx = delta.X
+
+        // You might want to move a bit less (say, 0.1) than the delta to avoid "bouncing", depending on your application.
+
+    }
+
+    playerObj.X += dx
+
+    // When Object.Update() is called, the Object's Shape is also moved accordingly.
+    playerObj.Update()
+
+}
+
+```
+### Quick question, is it inefficient to have a ton of Objects in a Space?
+
+Checking an object against a Space just operates using cellular positions, which are either filled, or not, with Objects. Having a lot of Objects doesn't really influence this process, as having more Objects doesn't complicate the collision checking any more than having fewer Objects, assuming they're sharing Cells.
 
 ----
 
 Welp, that's about it. If you want to see more info, feel free to examine the main.go and world#.go tests to see how a couple of quick example tests are set up.
 
-[You can check out the documentation here, as well.](https://pkg.go.dev/github.com/SolarLune/resolv/resolv?tab=doc)
+[You can check out the documentation here, as well.](https://pkg.go.dev/github.com/solarlune/resolv/resolv?tab=doc)
 
 ## Dependencies?
 
-For using resolv with your projects, there are no external dependencies. resolv just uses the built-in "fmt" and "math" packages.
+Resolv requires just kvartborg's [vector](github.com/kvartborg/vector) library, and the built-in `fmt` and `math` packages.
 
-For the resolv tests, resolv requires [ebiten](github.com/hajimehoshi/ebiten) and [vector](github.com/kvartborg/vector). Both of these are modules, so you should be able to simply run `go run ./examples` from the base directory for Go to download them (and Resolv) to run tests successfully.
+For the resolv tests, resolv requires [ebiten](github.com/hajimehoshi/ebiten) as well. Both of these are modules, so you should be able to simply run `go run ./examples` from the base directory for Go to download them (and Resolv) to run tests successfully.
 
 ## Shout-out Time!
 

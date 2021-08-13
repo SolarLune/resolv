@@ -14,9 +14,9 @@ type Space struct {
 	Objects               []*Object
 }
 
-// NewSpace creates a new Space, dividing up the provided rectangle of spaceWidthxspaceHeight into an even 2D array grid of Cells, each of the specified width and height.
-// Generally, you want cells to be the size of the smallest collide-able objects in your game, and you want to move Objects at a maximum speed of one cell size
-// per collision check.
+// NewSpace creates a new Space. spaceWidth and spaceHeight is the width and height of the Space (usually in pixels), which is then populated with cells of size
+// cellWidth by cellHeight. Generally, you want cells to be the size of the smallest collide-able objects in your game, and you want to move Objects at a maximum
+// speed of one cell size per collision check to avoid missing any possible collisions.
 func NewSpace(spaceWidth, spaceHeight, cellWidth, cellHeight int) *Space {
 
 	sp := &Space{
@@ -25,12 +25,50 @@ func NewSpace(spaceWidth, spaceHeight, cellWidth, cellHeight int) *Space {
 		Objects:    []*Object{},
 	}
 
-	sp.Resize(spaceWidth, spaceHeight)
+	sp.Resize(spaceWidth/cellWidth, spaceHeight/cellHeight)
 
 	// sp.Resize(int(math.Ceil(float64(spaceWidth)/float64(cellWidth))),
 	// 	int(math.Ceil(float64(spaceHeight)/float64(cellHeight))))
 
 	return sp
+
+}
+
+// Add adds the specified Objects to the Space, updating the Space's cells to refer to the Object.
+func (sp *Space) Add(objects ...*Object) {
+
+	for _, obj := range objects {
+
+		obj.Space = sp
+
+		// We call Update() once to make sure the object gets its cells added.
+		obj.Update()
+
+	}
+
+}
+
+// Remove removes the specified Objects from being associated with the Space. This should be done whenever an Object is removed from the
+// game.
+func (sp *Space) Remove(objects ...*Object) {
+
+	for _, obj := range objects {
+
+		for _, cell := range obj.TouchingCells {
+			cell.unregister(obj)
+		}
+
+		obj.TouchingCells = []*Cell{}
+
+		for i, o := range sp.Objects {
+			if o == obj {
+				sp.Objects[i] = sp.Objects[len(sp.Objects)-1]
+				sp.Objects = sp.Objects[:len(sp.Objects)-1]
+				break
+			}
+		}
+
+	}
 
 }
 
@@ -62,16 +100,50 @@ func (sp *Space) Cell(x, y int) *Cell {
 
 }
 
+// CheckCells checks a set of cells (from x,y to x + w, y + h in cellular coordinates) and return the first object within those Cells that contains any of the tags given.
+// If no tags are given, then CheckCells will return the first Object found in any Cell.
+func (sp *Space) CheckCells(x, y, w, h int, tags ...string) *Object {
+
+	for ix := x; ix < x+w; ix++ {
+
+		for iy := y; iy < y+h; iy++ {
+
+			cell := sp.Cell(ix, iy)
+
+			if cell != nil {
+
+				if len(tags) > 0 {
+
+					if cell.ContainsTags(tags...) {
+						for _, obj := range cell.Objects {
+							if obj.HasTags(tags...) {
+								return obj
+							}
+						}
+					}
+
+				} else if cell.Occupied() {
+					return cell.Objects[0]
+				}
+
+			}
+
+		}
+
+	}
+
+	return nil
+
+}
+
 // UnregisterAllObjects unregisters all Objects registered to Cells in the Space.
 func (sp *Space) UnregisterAllObjects() {
 
 	for y := 0; y < len(sp.Cells); y++ {
 
-		for x := 0; x < len(sp.Cells); x++ {
+		for x := 0; x < len(sp.Cells[y]); x++ {
 			cell := sp.Cells[y][x]
-			for _, obj := range cell.Objects {
-				obj.Remove()
-			}
+			sp.Remove(cell.Objects...)
 		}
 
 	}

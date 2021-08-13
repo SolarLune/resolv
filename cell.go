@@ -2,8 +2,8 @@ package resolv
 
 // Cell is used to contain and organize Object information.
 type Cell struct {
-	X, Y    int
-	Objects []*Object
+	X, Y    int       // The X and Y position of the cell in the Space - note that this is in Grid position, not World position.
+	Objects []*Object // The Objects that a Cell contains.
 }
 
 // newCell creates a new cell at the specified X and Y position. Should not be used directly.
