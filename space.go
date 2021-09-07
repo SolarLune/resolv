@@ -10,7 +10,7 @@ import (
 // Objects occupy those spaces.
 type Space struct {
 	Cells                 [][]*Cell
-	CellWidth, CellHeight int
+	CellWidth, CellHeight int // Width and Height of each Cell in "world-space" / pixels / whatever
 	Objects               []*Object
 }
 
@@ -89,7 +89,7 @@ func (sp *Space) Resize(width, height int) {
 
 }
 
-// Cell returns the Cell at the given X and Y position in the Space. If the X and Y position are
+// Cell returns the Cell at the given cellular / spatial (not world) X and Y position in the Space. If the X and Y position are
 // out of bounds, Cell() will return nil.
 func (sp *Space) Cell(x, y int) *Cell {
 
@@ -185,8 +185,7 @@ func (sp *Space) CellsInLine(startX, startY, endX, endY int) []*Cell {
 
 	if cell != nil && endCell != nil {
 
-		dv := vector.Vector{float64(endX - startX), float64(endY - startY)}
-		dv.Unit()
+		dv := vector.Vector{float64(endX - startX), float64(endY - startY)}.Unit()
 		dv[0] *= float64(sp.CellWidth / 2)
 		dv[1] *= float64(sp.CellHeight / 2)
 

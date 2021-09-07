@@ -5,11 +5,8 @@ import (
 	"image/color"
 	"math/rand"
 
-	"github.com/kvartborg/vector"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/solarlune/resolv"
 )
 
@@ -22,8 +19,8 @@ type WorldBouncer struct {
 }
 
 type Bouncer struct {
-	Object *resolv.Object
-	Speed  vector.Vector
+	Object         *resolv.Object
+	SpeedX, SpeedY float64
 }
 
 func NewWorldBouncer(game *Game) *WorldBouncer {
@@ -65,11 +62,13 @@ func (world *WorldBouncer) SpawnObject() {
 
 	bouncer := &Bouncer{
 		Object: resolv.NewObject(0, 0, 2, 2),
-		Speed:  vector.Vector{(rand.Float64() * 8) - 4, (rand.Float64() * 8) - 4},
+		SpeedX: (rand.Float64() * 8) - 4,
+		SpeedY: (rand.Float64() * 8) - 4,
 	}
 
 	world.Space.Add(bouncer.Object)
 
+	// Choose an unoccupied cell to spawn a bouncing object in
 	var c *resolv.Cell
 	for c == nil {
 		rx := rand.Intn(world.Space.Width())
@@ -88,12 +87,10 @@ func (world *WorldBouncer) SpawnObject() {
 
 func (world *WorldBouncer) Update() {
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
-		world.ShowHelpText = !world.ShowHelpText
-	}
-
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		world.SpawnObject()
+		for i := 0; i < 5; i++ {
+			world.SpawnObject()
+		}
 	} else if ebiten.IsKeyPressed(ebiten.KeyDown) {
 		if len(world.Bouncers) > 0 {
 			b := world.Bouncers[0]
@@ -104,21 +101,29 @@ func (world *WorldBouncer) Update() {
 
 	for _, b := range world.Bouncers {
 
-		b.Speed[1] += 0.1
+		b.SpeedY += 0.1
 
-		if check := b.Object.Check(b.Speed[0], 0); check != nil {
-			b.Speed[0] *= -1
-			b.Object.X += check.ContactWithObject(check.Objects[0]).X
-		} else {
-			b.Object.X += b.Speed[0]
+		dx := b.SpeedX
+		dy := b.SpeedY
+
+		if check := b.Object.Check(dx, 0); check != nil {
+			// We move a bouncer into contact with the owning cell rather than the object because we don't need to be that specific and
+			// moving into contact with another moving object that bounces away can get them both stuck; it's easier to bounce off of the
+			// "containing" cells, which are static.
+			contact := check.ContactWithCell(check.Cells[0])
+			dx = contact.X()
+			b.SpeedX *= -1
 		}
 
-		if check := b.Object.Check(0, b.Speed[1]); check != nil {
-			b.Speed[1] *= -1
-			b.Object.Y += check.ContactWithObject(check.Objects[0]).Y
-		} else {
-			b.Object.Y += b.Speed[1]
+		b.Object.X += dx
+
+		if check := b.Object.Check(0, dy); check != nil {
+			contact := check.ContactWithCell(check.Cells[0])
+			dy = contact.Y()
+			b.SpeedY *= -1
 		}
+
+		b.Object.Y += dy
 
 		b.Object.Update()
 
@@ -141,21 +146,22 @@ func (world *WorldBouncer) Draw(screen *ebiten.Image) {
 		world.Game.DebugDraw(screen, world.Space)
 	}
 
-	if world.ShowHelpText {
+	if world.Game.ShowHelpText {
 
 		world.Game.DrawText(screen, 16, 16,
 			"~ Bouncer Demo ~",
 			"Up Arrow: Add bouncer",
 			"Down Arrow: Remove bouncer",
 			"",
+			fmt.Sprintf("%d Bouncers in the world.", len(world.Bouncers)),
+			fmt.Sprintf("%d FPS (frames per second)", int(ebiten.CurrentFPS())),
+			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.CurrentTPS())),
+			"",
 			"F1: Toggle Debug View",
 			"F2: Show / Hide help text",
 			"R: Restart world",
 			"E: Next world",
 			"Q: Previous world",
-			fmt.Sprintf("%d Bouncers in the world.", len(world.Bouncers)),
-			fmt.Sprintf("%d FPS (frames per second)", int(ebiten.CurrentFPS())),
-			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.CurrentTPS())),
 		)
 
 	}

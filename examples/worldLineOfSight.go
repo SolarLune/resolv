@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"image/color"
-
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/kvartborg/vector"
+	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -13,15 +11,13 @@ import (
 )
 
 type WorldLineTest struct {
-	Game          *Game
-	Space         *resolv.Space
-	ShowHelpText  bool
-	Player        *resolv.Object
-	CollidingCell *resolv.Cell
+	Game   *Game
+	Space  *resolv.Space
+	Player *resolv.Object
 }
 
 func NewWorldLineTest(game *Game) *WorldLineTest {
-	w := &WorldLineTest{Game: game, ShowHelpText: true}
+	w := &WorldLineTest{Game: game}
 	w.Init()
 	return w
 }
@@ -61,40 +57,36 @@ func (world *WorldLineTest) Init() {
 
 func (world *WorldLineTest) Update() {
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
-		world.ShowHelpText = !world.ShowHelpText
-	}
-
-	moveVec := vector.Vector{0, 0}
+	dx, dy := 0.0, 0.0
 	moveSpd := 2.0
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		moveVec[1] = -moveSpd
+		dy = -moveSpd
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		moveVec[1] += moveSpd
+		dy += moveSpd
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
-		moveVec[0] = -moveSpd
+		dx = -moveSpd
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyD) {
-		moveVec[0] += moveSpd
+		dx += moveSpd
 	}
 
-	if col := world.Player.Check(moveVec[0], 0, "solid"); col != nil {
-		world.Player.X += col.ContactWithObject(col.Objects[0]).X
-	} else {
-		world.Player.X += moveVec[0]
+	if col := world.Player.Check(dx, 0, "solid"); col != nil {
+		dx = col.ContactWithObject(col.Objects[0]).X()
 	}
 
-	if col := world.Player.Check(0, moveVec[1], "solid"); col != nil {
-		world.Player.Y += col.ContactWithObject(col.Objects[1]).Y
-	} else {
-		world.Player.Y += moveVec[1]
+	world.Player.X += dx
+
+	if col := world.Player.Check(0, dy, "solid"); col != nil {
+		dy = col.ContactWithObject(col.Objects[0]).Y()
 	}
+
+	world.Player.Y += dy
 
 	world.Player.Update()
 
@@ -154,20 +146,21 @@ func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 		world.Game.DebugDraw(screen, world.Space)
 	}
 
-	if world.ShowHelpText {
+	if world.Game.ShowHelpText {
 
 		world.Game.DrawText(screen, 16, 16,
 			"~ Line of sight test ~",
 			"WASD keys: Move player",
 			"Mouse: Hover over impassible objects",
 			"to get the closest wall to the player.",
+			fmt.Sprintf("Mouse X: %d, Mouse Y: %d", mouseX, mouseY),
+			"Clear line of sight: "+strconv.FormatBool(!interrupted),
 			"",
 			"F1: Toggle Debug View",
 			"F2: Show / Hide help text",
 			"R: Restart world",
 			"E: Next world",
 			"Q: Previous world",
-			fmt.Sprintf("Mouse X: %d, Mouse Y: %d", mouseX, mouseY),
 			fmt.Sprintf("%d FPS (frames per second)", int(ebiten.CurrentFPS())),
 			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.CurrentTPS())),
 		)

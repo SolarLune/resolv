@@ -11,33 +11,30 @@ import (
 type WorldShapeTest struct {
 	Game *Game
 	// Space *resolv.Space
-
-	Triangle     *resolv.ConvexPolygon
-	Intersection resolv.Delta
-	Solid        *resolv.ConvexPolygon
+	Contact   *resolv.ContactSet
+	Solid     *resolv.ConvexPolygon
+	CircleOne *resolv.Circle
+	CircleTwo *resolv.Circle
 }
 
 func NewWorldShapeTest(game *Game) *WorldShapeTest {
-	return &WorldShapeTest{
-		Game: game,
-		Triangle: resolv.NewConvexPolygon(
-			-10, -10,
-			10, 10,
-			-10, 10,
-		),
-		Solid: resolv.NewConvexPolygon(
-			100, 100,
-			300, 80,
-			350, 150,
-			300, 300,
-			200, 350,
-			80, 150,
-		),
-		// Space: resolv.NewSpace(game.Width, game.Height, 16, 16)
-	}
+	world := &WorldShapeTest{Game: game}
+	world.Init()
+	return world
 }
 
 func (world *WorldShapeTest) Init() {
+
+	world.Solid = resolv.NewConvexPolygon(
+		100, 100,
+		250, 80,
+		300, 150,
+		250, 250,
+		150, 300,
+		80, 150,
+	)
+	world.CircleOne = resolv.NewCircle(500, 200, 32)
+	world.CircleTwo = resolv.NewCircle(400, 250, 32)
 
 }
 
@@ -62,47 +59,72 @@ func (world *WorldShapeTest) Update() {
 		dy += 1
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeySpace) {
-		if world.Intersection.Valid {
-			world.Triangle.Move(world.Intersection.Vector[0], world.Intersection.Vector[1])
-		}
+	if ebiten.IsKeyPressed(ebiten.KeySpace) && world.Contact != nil {
+		world.CircleOne.MoveVec(world.Contact.MTV)
 	}
 
-	world.Intersection = world.Triangle.Intersection(world.Solid)
+	world.Contact = world.CircleOne.Intersection(0, 0, world.Solid)
+	if world.Contact == nil {
+		world.Contact = world.CircleOne.Intersection(0, 0, world.CircleTwo)
+	}
 
-	world.Triangle.Move(dx, dy)
-
+	world.CircleOne.Move(dx, dy)
 }
 
 func (world *WorldShapeTest) Draw(screen *ebiten.Image) {
 
-	triangleColor := color.RGBA{0, 255, 0, 255}
-	if world.Intersection.Valid {
-		triangleColor = color.RGBA{255, 0, 0, 255}
+	controllingColor := color.RGBA{0, 255, 80, 255}
+	if world.Contact != nil {
+		controllingColor = color.RGBA{160, 0, 0, 255}
 	}
 
-	world.DrawPolygon(screen, world.Triangle, triangleColor)
-	world.DrawPolygon(screen, world.Solid, color.RGBA{255, 255, 255, 255})
+	DrawPolygon(screen, world.Solid, color.White)
 
-	world.Game.DrawText(screen, 16, 16,
-		"~World Shape Test~",
-	)
-	// if world.Game.Debug {
-	// }
+	DrawCircle(screen, world.CircleOne, controllingColor)
+	DrawCircle(screen, world.CircleTwo, color.White)
+
+	if world.Contact != nil {
+
+		for _, p := range world.Contact.Points {
+			world.DrawBigDot(screen, p.X(), p.Y(), color.RGBA{255, 255, 0, 255})
+		}
+
+		ebitenutil.DrawLine(screen, world.Contact.Center.X(), world.Contact.Center.Y(), world.Contact.Center.X()+world.Contact.MTV.X(), world.Contact.Center.Y()+world.Contact.MTV.Y(), color.RGBA{255, 128, 0, 255})
+
+		world.DrawBigDot(screen, world.Contact.Center.X(), world.Contact.Center.Y(), color.RGBA{255, 128, 255, 255})
+
+	}
+
+	if world.Game.ShowHelpText {
+
+		world.Game.DrawText(screen, 16, 16,
+			"~World Shape Test~",
+			"Move green Circle: Arrow keys",
+			"Move along MTV (Minimum Translation Vector) to avoid collision: Space key",
+			"",
+			"The circle turns red when intersecting with another Shape.",
+			"Yellow dots indicate contact points.",
+			"The pink dot is the center of the contact points.",
+			"The orange line indicates the MTV. This is how far the Shape",
+			"must move in whatever direction to avoid intersection.",
+			"This gives best results when not very far into another Shape.",
+			"",
+			"F2: Show / Hide help text",
+			"R: Restart world",
+			"E: Next world",
+			"Q: Previous world",
+		)
+
+	}
 
 }
 
-func (world *WorldShapeTest) DrawPolygon(screen *ebiten.Image, shape *resolv.ConvexPolygon, color color.Color) {
+func (world *WorldShapeTest) DrawBigDot(screen *ebiten.Image, ix, iy float64, color color.Color) {
 
-	for i := 0; i < len(shape.Vertices); i++ {
-		vert := shape.Vertices[i]
-		next := shape.Vertices[0]
-
-		if i < len(shape.Vertices)-1 {
-			next = shape.Vertices[i+1]
-		}
-		ebitenutil.DrawLine(screen, vert.X, vert.Y, next.X, next.Y, color)
-
-	}
+	newImg := ebiten.NewImage(4, 4)
+	newImg.Fill(color)
+	opt := &ebiten.DrawImageOptions{}
+	opt.GeoM.Translate(ix-2, iy-2)
+	screen.DrawImage(newImg, opt)
 
 }

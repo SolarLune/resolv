@@ -24,6 +24,8 @@ type Game struct {
 	CurrentWorld  int
 	Width, Height int
 	Debug         bool
+	ShowHelpText  bool
+	Screen        *ebiten.Image
 	FontFace      font.Face
 }
 
@@ -33,15 +35,16 @@ func NewGame() *Game {
 	ebiten.SetWindowTitle("resolv test")
 
 	g := &Game{
-		Width:  640,
-		Height: 360,
+		Width:        640,
+		Height:       360,
+		ShowHelpText: true,
 	}
 
 	g.Worlds = []WorldInterface{
+		NewWorldBouncer(g),
 		NewWorldPlatformer(g),
 		NewWorldLineTest(g),
-		NewWorldBouncer(g),
-		NewWorldPrecision(g),
+		// NewWorldMultiShape(g), // MultiShapes are still buggy; gotta fix 'em up
 		NewWorldShapeTest(g),
 	}
 
@@ -53,7 +56,7 @@ func NewGame() *Game {
 
 	go func() {
 
-		for true {
+		for {
 
 			fmt.Println("FPS: ", ebiten.CurrentFPS())
 			fmt.Println("Ticks: ", ebiten.CurrentTPS())
@@ -81,6 +84,10 @@ func (g *Game) Update() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		g.Debug = !g.Debug
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
+		g.ShowHelpText = !g.ShowHelpText
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
@@ -114,6 +121,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	g.Screen = screen
 	screen.Fill(color.RGBA{20, 20, 40, 255})
 	g.Worlds[g.CurrentWorld].Draw(screen)
 }
