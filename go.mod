@@ -1,8 +1,5 @@
-module github.com/SolarLune/resolv
+module github.com/solarlune/resolv
 
-go 1.15
+go 1.16
 
-require (
-	github.com/gen2brain/raylib-go v0.0.0-20201123133337-d123299701ae
-	github.com/veandco/go-sdl2 v0.4.4
-)
+require github.com/kvartborg/vector v0.0.0-20200419093813-2cba0cabb4f0

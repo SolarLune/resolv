@@ -1,4 +1,2 @@
-github.com/gen2brain/raylib-go v0.0.0-20201123133337-d123299701ae h1:rvfNLE0fzkpYCQMio7Hwu/ZpPIk8whznj8IANG3SZYw=
-github.com/gen2brain/raylib-go v0.0.0-20201123133337-d123299701ae/go.mod h1:LUVRDQbnxUaOgzLzW5lMS+IcbqlXHIqIA9wq8wxzmcA=
-github.com/veandco/go-sdl2 v0.4.4 h1:coOJGftOdvNvGoUIZmm4XD+ZRQF4mg9ZVHmH3/42zFQ=
-github.com/veandco/go-sdl2 v0.4.4/go.mod h1:FB+kTpX9YTE+urhYiClnRzpOXbiWgaU3+5F2AB78DPg=
+github.com/kvartborg/vector v0.0.0-20200419093813-2cba0cabb4f0 h1:v8lWpj5957KtDMKu+xQtlu6G3ZoZR6Tn9bsfZCRG5Xw=
+github.com/kvartborg/vector v0.0.0-20200419093813-2cba0cabb4f0/go.mod h1:GAX7tMJqXx9fB1BrsTWPOXy6IBRX+J461BffVPAdpwo=
