@@ -14,7 +14,7 @@ Basically: It allows you to do simple physics easier, without actually doing the
 
 Because it's like... You know, collision resolution? To **resolve** a collision? So... That's the name. I juste took an e off because I seem to have misplaced it.
 
-## Why did you create resolv?
+## Why did you create Resolv?
 
 Because I was making games in Go and found that existing frameworks tend to omit collision testing and resolution code. Collision testing isn't too hard, but it's done frequently enough, and most games need simple enough physics that it makes sense to make a library to handle collision testing and resolution for simple, "arcade-y" games; if you need realistic physics, you have other options like Box2D or something.
 
@@ -22,7 +22,7 @@ ____
 
 As an aside, this actually used to be quite different; I decided to rework it when I was less than satisfied with my previous efforts, and after a few attempts over several months, I got it to this state (which, I think, is largely better). That said, there are breaking changes between the previous version, v0.4, and the current one (v0.5). These changes were necessary, in my opinion, to improve the library.
 
-In comparison to the previous version of resolv, v0.5 includes, among other things:
+In comparison to the previous version of Resolv, v0.5 includes, among other things:
 
 - A redesigned API from scratch. 
 - The usage of floats instead of ints for position and movement, simplifying real usage of the library dramatically.
@@ -204,3 +204,5 @@ Resolv requires just kvartborg's nice and clean [vector](github.com/kvartborg/ve
 ## Shout-out Time!
 
 Thanks to the people who stopped by on my [YouTube Golang gamedev streams](https://www.youtube.com/c/SolarLune) - they helped out a lot with a couple of the technical aspects of getting Go to do what I needed to, haha.
+
+If you want to support development, feel free to throw me a couple of bones over on my [Patreon](https://www.patreon.com/SolarLune) or [itch.io](https://solarlune.itch.io/) / [Steam](https://store.steampowered.com/app/1269310/MasterPlan/) pages. I really appreciate it - thanks!
