@@ -199,7 +199,7 @@ Welp, that's about it. If you want to see more info, feel free to examine the ma
 
 ## Dependencies?
 
-Resolv requires just kvartborg's nice and clean [vector](github.com/kvartborg/vector) library, and the built-in `math` package. For the tests, [ebiten](github.com/hajimehoshi/ebiten) is also required.
+Resolv requires just kvartborg's nice and clean [vector](https://github.com/kvartborg/vector) library, and the built-in `math` package. For the tests, [ebiten](https://github.com/hajimehoshi/ebiten) is also required.
 
 ## Shout-out Time!
 
