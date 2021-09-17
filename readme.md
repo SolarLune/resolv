@@ -1,8 +1,8 @@
 ![](https://i.imgur.com/BDQ2wWJ.gif)
 
-# Resolv v0.5
+# Resolv v0.5.1
 
-[pkg.go.dev](https://pkg.go.dev/github.com/solarlune/resolv/resolv?tab=doc)
+[pkg.go.dev](https://pkg.go.dev/github.com/solarlune/resolv)
 
 ## What is Resolv?
 
@@ -225,7 +225,7 @@ ___
 
 Welp, that's about it. If you want to see more info, feel free to examine the examples in the `examples` folder; the `worldPlatformer.go` example is particularly in-depth when it comes to movement and collision response.
 
-[You can check out the documentation here, as well.](https://pkg.go.dev/github.com/solarlune/resolv/resolv?tab=doc)
+[You can check out the documentation here, as well.](https://pkg.go.dev/github.com/solarlune/resolv)
 
 ## Dependencies?
 
