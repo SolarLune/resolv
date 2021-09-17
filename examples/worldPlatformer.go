@@ -264,7 +264,7 @@ func (world *WorldPlatformer) Update() {
 
 		// Sliding around a misspaced jump is a small thing that makes jumping a bit more forgiving, and is something different polished platformers
 		// (like the 2D Mario games) do to make it a smidge more comfortable to play. For a visual example of this, see this excellent devlog post
-		// from the extremely impressive indie game, Leilani's Island: https://forums.tigsource.com/index.php?topic=46289.msg1124613#msg1124613
+		// from the extremely impressive indie game, Leilani's Island: https://forums.tigsource.com/index.php?topic=46289.msg1387138#msg1387138
 
 		// To accomplish this sliding, we simply call Collision.SlideAgainstCell() to see if we can slide.
 		// We pass the first cell, and tags that we want to avoid when sliding (i.e. we don't want to slide into cells that contain other solid objects).
@@ -397,9 +397,11 @@ func (world *WorldPlatformer) Update() {
 
 func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 
-	for _, o := range world.Space.Objects {
+	fmt.Println(world.Space.Objects())
 
-		if o.HasTags("platform") {
+	for _, o := range world.Space.Objects() {
+
+		if o.HasTags("platform") && o != world.FloatingPlatform {
 			drawColor := color.RGBA{180, 100, 0, 255}
 			ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, drawColor)
 		} else if o.HasTags("ramp") {
@@ -412,6 +414,12 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 		}
 
 	}
+
+	// We draw the floating platform separately because Space.Objects() returns Objects in order of which cells they are in, which means
+	// that the platform would draw under the solid blocks if it's below it. This way, it always draws on top.
+	o := world.FloatingPlatform
+	drawColor := color.RGBA{180, 100, 0, 255}
+	ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, drawColor)
 
 	player := world.Player.Object
 	playerColor := color.RGBA{0, 255, 60, 255}

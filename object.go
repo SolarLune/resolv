@@ -55,7 +55,15 @@ func (obj *Object) Update() {
 
 	if obj.Space != nil {
 
+		// Object.Space.Remove() sets the removed object's Space to nil, indicating it's been removed. Because we're updating
+		// the Object (which is essentially removing it from its previous Cells / position and re-adding it to the new Cells /
+		// position), we store the original Space to re-set it.
+
+		space := obj.Space
+
 		obj.Space.Remove(obj)
+
+		obj.Space = space
 
 		cx, cy, ex, ey := obj.BoundsToSpace(0, 0)
 
@@ -73,8 +81,6 @@ func (obj *Object) Update() {
 			}
 
 		}
-
-		obj.Space.Objects = append(obj.Space.Objects, obj)
 
 	}
 
@@ -213,8 +219,12 @@ func (obj *Object) SetBounds(topLeft, bottomRight vector.Vector) {
 
 // Check checks the space around the object using the designated delta movement (dx and dy). This is done by querying the containing Space's Cells
 // so that it can see if moving it would coincide with a cell that houses another Object (filtered using the given selection of tag strings). If so,
-// Check returns a Collision. If no objects are found, this function returns nil.
+// Check returns a Collision. If no objects are found or the Object does not exist within a Space, this function returns nil.
 func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
+
+	if obj.Space == nil {
+		return nil
+	}
 
 	cc := NewCollision()
 	cc.checkingObject = obj

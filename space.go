@@ -11,7 +11,6 @@ import (
 type Space struct {
 	Cells                 [][]*Cell
 	CellWidth, CellHeight int // Width and Height of each Cell in "world-space" / pixels / whatever
-	Objects               []*Object
 }
 
 // NewSpace creates a new Space. spaceWidth and spaceHeight is the width and height of the Space (usually in pixels), which is then populated with cells of size
@@ -22,7 +21,6 @@ func NewSpace(spaceWidth, spaceHeight, cellWidth, cellHeight int) *Space {
 	sp := &Space{
 		CellWidth:  cellWidth,
 		CellHeight: cellHeight,
-		Objects:    []*Object{},
 	}
 
 	sp.Resize(spaceWidth/cellWidth, spaceHeight/cellHeight)
@@ -60,15 +58,37 @@ func (sp *Space) Remove(objects ...*Object) {
 
 		obj.TouchingCells = []*Cell{}
 
-		for i, o := range sp.Objects {
-			if o == obj {
-				sp.Objects[i] = sp.Objects[len(sp.Objects)-1]
-				sp.Objects = sp.Objects[:len(sp.Objects)-1]
-				break
+		obj.Space = nil
+
+	}
+
+}
+
+// Objects loops through all Cells in the Space (from top to bottom, and from left to right) to return all Objects
+// that exist in the Space. Of course, each Object is counted only once.
+func (sp *Space) Objects() []*Object {
+
+	objectsAdded := map[*Object]bool{}
+	objects := []*Object{}
+
+	for cy := range sp.Cells {
+
+		for cx := range sp.Cells[cy] {
+
+			for _, o := range sp.Cells[cy][cx].Objects {
+
+				if _, added := objectsAdded[o]; !added {
+					objects = append(objects, o)
+					objectsAdded[o] = true
+				}
+
 			}
+
 		}
 
 	}
+
+	return objects
 
 }
 

@@ -45,7 +45,7 @@ func (world *WorldLineTest) Init() {
 
 	world.Space.Add(geometry...)
 
-	for _, o := range world.Space.Objects {
+	for _, o := range world.Space.Objects() {
 		o.AddTags("solid")
 	}
 
@@ -94,7 +94,7 @@ func (world *WorldLineTest) Update() {
 
 func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 
-	for _, o := range world.Space.Objects {
+	for _, o := range world.Space.Objects() {
 		drawColor := color.RGBA{60, 60, 60, 255}
 		if o.HasTags("player") {
 			drawColor = color.RGBA{0, 255, 0, 255}

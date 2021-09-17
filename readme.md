@@ -41,31 +41,39 @@ There's a couple of ways to use Resolv.
 
 Firstly, you can create a Space, create Objects, add them to the Space, check the Space for collisions / intersections, and finally update the Objects as they move.
 
-In Resolv v0.5, a Space represents a limited, bounded area which is separated into even Cells of predetermined size. Any Objects added to the Space fill at least one Cell (as long as the Object is within the Space). By checking a position in the Space, you can tell which Cells are occupied and where other objects are. This is the broadphase, simpler portion of Resolv.
+In Resolv v0.5, a Space represents a limited, bounded area which is separated into even Cells of predetermined size. Any Objects added to the Space fill at least one Cell (as long as the Object is within the Space). By checking a position in the Space, you can tell which Cells are occupied and so, where objects generally are. This is the broadphase, simpler portion of Resolv. 
+
+Here's an example:
 
 ```go
 
 var space *resolv.Space
 var playerObj *resolv.Object
 
-// As an example, in a game's initialization function that runs once when the game or level starts...
+// As an example, in a game's initialization function that runs once
+// when the game or level starts...
 
 func Init() {
 
     // First, we want to create a Space. This represents the areas in our game world 
     // where objects can move about and check for collisions.
 
-    // The first two arguments represent our Space's width and height, while the following two
-    // represent the individual Cells' sizes. The smaller the Cells' sizes, the finer the collision detection.
-    // Generally, each Cell should be reasonably be the size of a "unit", whatever that may be for the game.
-    // For example, the player character would fit into one or more of these Cells.
+    // The first two arguments represent our Space's width and height, while the 
+    // following two represent the individual Cells' sizes. The smaller the Cells' 
+    // sizes, the finer the collision detection. Generally, each Cell should be 
+    // reasonably be the size of a "unit", whatever that may be for the game.
+    // For example, the player character, enemies, and collectibles could fit 
+    // into one or more of these Cells.
+
     space = resolv.NewSpace(640, 480, 16, 16)
 
     // Next, we can start creating things and adding it to the Space.
 
-    // Here's some level geometry.
+    // Here's some level geometry. resolv.NewObject() takes the X and Y
+    // position, and width and height to create a new *resolv.Object.
+    // You can also specify tags when creating an Object. Tags can be used 
+    // to filter down objects when checking the Space for a collision.
 
-    // resolv.NewObject takes the X and Y position, and width and height of the object.
     space.Add(
         resolv.NewObject(0, 0, 640, 16),
         resolv.NewObject(0, 480-16, 640, 16),
@@ -74,7 +82,7 @@ func Init() {
     )
 
     // We'll keep a reference to the player's Object to move it later.
-    playerObj = resolv.NewObject(32, 32, 16, 16, space)
+    playerObj = resolv.NewObject(32, 32, 16, 16)
 
     // Finally, we add the Object to the Space, and we're good to go!
     space.Add(playerObj)
@@ -85,39 +93,52 @@ func Init() {
 
 func Update() {
 
-    // Let's say we are attempting to move the player to the right by 2 pixels. Here's how we could do it.
+    // Let's say we are attempting to move the player to the right by 2 
+    // pixels. Here's how we could do it.
     dx := 2.0
 
-    // To start, we check to see if there would be a collision if the playerObj were to move to the right by 2 pixels. The Check function returns
-    // a Collision object if so.
+    // To start, we check to see if there would be a collision if the 
+    // playerObj were to move to the right by 2 pixels. The Check function 
+    // returns a Collision object if so.
 
     if collision := playerObj.Check(dx, 0); collision != nil {
         
-        // If there was a collision, the "playerObj" Object can't move fully to the right by 2, and Object.Check() returns a Collision object.
-        // A Collision object contains the Objects and Cells that the calling *resolv.Object ran into when it called Check().
+        // If there was a collision, the "playerObj" Object can't move fully 
+        // to the right by 2, and Object.Check() would return a *Collision object.
+        // A *Collision object contains the Objects and Cells that the calling 
+        // *resolv.Object ran into when it called Check().
 
-        // To resolve (haha) this collision, we probably want to move the player into contact with that Object. So, we call Collision.ContactWithObject() on the first
-        // Object that we came into contact with (which is stored in the Collision). It will return a vector.Vector, which indicates how much distance to move in 
-        // to come into contact with the specified Object.
+        // To resolve (haha) this collision, we probably want to move the player into
+        // contact with that Object. So, we call Collision.ContactWithObject() on the 
+        // first Object that we came into contact with (which is stored in the Collision).
 
-        // We could also come into contact with the cell to the right using Collision.ContactWithCell(collision.Cells[0]).
+        // Collision.ContactWithObject() will return a vector.Vector, indicating how much
+        // distance to move to come into contact with the specified Object.
+
+        // We could also come into contact with the cell to the right using 
+        // Collision.ContactWithCell(collision.Cells[0]).
         dx = collision.ContactWithObject(collision.Objects[0]).X()
 
     }
 
-    // If there wasn't a collision, then dx will just be 2, as set above, and the movement will go through unimpeded.
+    // If there wasn't a collision, then dx will just be 2, as set above, and the 
+    // movement will go through unimpeded.
     playerObj.X += dx
 
-    // Lastly, when we move an Object, we need to call Object.Update() so it can be updated within the Space as well. For static / unmoving Objects, this is
+    // Lastly, when we move an Object, we need to call Object.Update() so it can be 
+    // updated within the Space as well. For static / unmoving Objects, this is
     // unnecessary, as Object.Update() is called once when an Object is first added to a Space.
     playerObj.Update()
 
-    // If we were making a platformer, you could then check for the Y-axis as well - conceptually, this is decomposing movement into two separate axes,
-    // and is a familiar and well-used approach for handling movement in a standard tile-based platformer. See this fantastic post on the subject:
+    // If we were making a platformer, you could then check for the Y-axis as well. 
+    // Conceptually, this is decomposing movement into two separate axes, and is a familiar 
+    // and well-used approach for handling movement in a standard tile-based platformer. 
+    // See this fantastic post on the subject:
     // http://higherorderfun.com/blog/2012/05/20/the-guide-to-implementing-2d-platformers/
 
-    // If you want to filter out types of Objects to check for, add tags on the objects you want to filter using Object.AddTags(), or when the Object is created 
-    // with resolv.NewObject(), and specify them in Object.Check.
+    // If you want to filter out types of Objects to check for, add tags on the objects 
+    // you want to filter using Object.AddTags(), or when the Object is created 
+    // with resolv.NewObject(), and specify them in Object.Check().
 
     onlySolidOrHazardous := playerObj.Check(dx, 0, "hazard", "solid")
 
@@ -141,13 +162,17 @@ func Init() {
 
     // Create the Object as usual, but then...
     playerObj = resolv.NewObject(32, 128, 16, 16)
-    // Assign the Object a Shape. A Rectangle is, for now, a ConvexPolygon that's simply rectangular.
+    // Assign the Object a Shape. A Rectangle is, for now, a ConvexPolygon that's simply 
+    // rectangular, rather than a specific, separate Shape.
     playerObj.SetShape(resolv.NewRectangle(0, 0, 16, 16))
-    // Then we add the Object to the Space. Note that it's important that you do this last so that the Shape is properly updated. (You can also simply call Object.Update() later.)
+    // Then we add the Object to the Space.
     space.Add(playerObj)
 
     stairs = resolv.NewObject(96, 128, 16, 16)
-    // NewConvexPolygon() takes a series of float64 values indicating the X and Y positions of each vertex; the call below, for example, creates a triangle.
+
+    // Here, we use resolvl.NewConvexPolygon() to create a new ConvexPolygon Shape. It takes 
+    // a series of float64 values indicating the X and Y positions of each vertex; the call 
+    // below, for example, creates a triangle.
 
     stairs.SetShape(resolv.NewConvexPolygon(
         16, 0, // (x, y) pair for the first vertex
@@ -161,8 +186,9 @@ func Init() {
     // |  \
     // 2---1
 
-    // Note that the vertices are in clockwise order. They can be in whatever order as long as it's consistent throughout your application. 
-    // resolv.NewRectangle also specifies the vertices in clockwise order.
+    // Note that the vertices are in clockwise order. They can be in either clockwise or 
+    // counter-clockwise order as long as it's consistent throughout your application. 
+    // As an aside, resolv.NewRectangle() defines the vertices in clockwise order.
     space.Add(stairs)
 
 }
@@ -171,20 +197,24 @@ func Update() {
 
     dx := 1.0
 
-    // Shape.Intersection() returns a ContactSet, representing information regarding the intersection between two Shapes (i.e. the point(s) of
+    // Shape.Intersection() returns a ContactSet, representing information 
+    // regarding the intersection between two Shapes (i.e. the point(s) of
     // collision, the distance to move to get out, etc).
     if intersection := playerObj.Shape.Intersection(dx, 0, stairs.Shape); intersection != nil {
         
-        // We are colliding with the stairs shape, so we can move according to the delta to get out of it.
+        // We are colliding with the stairs shape, so we can move according
+        // to the delta to get out of it.
         dx = intersection.MTV.X()
 
-        // You might want to move a bit less (say, 0.1) than the delta to avoid "bouncing", depending on your application.
+        // You might want to move a bit less (say, 0.1) than the delta to
+        // avoid "bouncing", depending on your application.
 
     }
 
     playerObj.X += dx
 
-    // When Object.Update() is called, the Object's Shape is also moved accordingly.
+    // When Object.Update() is called, the Object's Shape is also moved
+    // accordingly.
     playerObj.Update()
 
 }
@@ -193,13 +223,13 @@ func Update() {
 
 ___
 
-Welp, that's about it. If you want to see more info, feel free to examine the main.go and world#.go tests to see how a couple of quick example tests are set up.
+Welp, that's about it. If you want to see more info, feel free to examine the examples in the `examples` folder; the `worldPlatformer.go` example is particularly in-depth when it comes to movement and collision response.
 
 [You can check out the documentation here, as well.](https://pkg.go.dev/github.com/solarlune/resolv/resolv?tab=doc)
 
 ## Dependencies?
 
-Resolv requires just kvartborg's nice and clean [vector](https://github.com/kvartborg/vector) library, and the built-in `math` package. For the tests, [ebiten](https://github.com/hajimehoshi/ebiten) is also required.
+Resolv requires just kvartborg's nice and clean [vector](https://github.com/kvartborg/vector) library, and the built-in `math` package. For the examples, [ebiten](https://github.com/hajimehoshi/ebiten), as well as tanema's [gween](https://github.com/tanema/gween) library are also required.
 
 ## Shout-out Time!
 
