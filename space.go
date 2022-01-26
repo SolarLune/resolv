@@ -156,6 +156,18 @@ func (sp *Space) CheckCells(x, y, w, h int, tags ...string) *Object {
 
 }
 
+// CheckCellsWorld checks the cells of the Grid with the given world coordinates.
+// Internally, this is just syntactic sugar for calling Space.WorldToSpace() on the
+// position and size given.
+func (sp *Space) CheckCellsWorld(x, y, w, h float64, tags ...string) *Object {
+
+	sx, sy := sp.WorldToSpace(x, y)
+	cw, ch := sp.WorldToSpace(w, h)
+
+	return sp.CheckCells(sx, sy, cw, ch, tags...)
+
+}
+
 // UnregisterAllObjects unregisters all Objects registered to Cells in the Space.
 func (sp *Space) UnregisterAllObjects() {
 

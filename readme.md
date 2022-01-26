@@ -223,7 +223,7 @@ func Update() {
 
 ___
 
-Welp, that's about it. If you want to see more info, feel free to examine the examples in the `examples` folder; the `worldPlatformer.go` example is particularly in-depth when it comes to movement and collision response.
+Welp, that's about it. If you want to see more info, feel free to examine the examples in the `examples` folder; the `worldPlatformer.go` example is particularly in-depth when it comes to movement and collision response. You can run them by just calling `go run .` from the examples folder.
 
 [You can check out the documentation here, as well.](https://pkg.go.dev/github.com/solarlune/resolv)
 
