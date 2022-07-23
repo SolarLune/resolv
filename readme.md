@@ -180,10 +180,10 @@ func Init() {
         0, 16, // (x, y) pair for the third and last vertex
     ))
 
-    // 0
-    // |\
-    // | \
-    // |  \
+    //     0
+    //    /|
+    //   / |
+    //  /  |
     // 2---1
 
     // Note that the vertices are in clockwise order. They can be in either clockwise or 

@@ -35,6 +35,10 @@ func NewSpace(spaceWidth, spaceHeight, cellWidth, cellHeight int) *Space {
 // Add adds the specified Objects to the Space, updating the Space's cells to refer to the Object.
 func (sp *Space) Add(objects ...*Object) {
 
+	if sp == nil {
+		panic("ERROR: space is nil")
+	}
+
 	for _, obj := range objects {
 
 		obj.Space = sp
@@ -49,6 +53,10 @@ func (sp *Space) Add(objects ...*Object) {
 // Remove removes the specified Objects from being associated with the Space. This should be done whenever an Object is removed from the
 // game.
 func (sp *Space) Remove(objects ...*Object) {
+
+	if sp == nil {
+		panic("ERROR: space is nil")
+	}
 
 	for _, obj := range objects {
 
