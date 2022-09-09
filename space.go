@@ -192,8 +192,8 @@ func (sp *Space) UnregisterAllObjects() {
 
 // WorldToSpace converts from a world position (x, y) to a position in the Space (a grid-based position).
 func (sp *Space) WorldToSpace(x, y float64) (int, int) {
-	fx := int(math.Floor(x / float64(sp.CellWidth)))
-	fy := int(math.Floor(y / float64(sp.CellHeight)))
+	fx := int(math.Ceil(x / float64(sp.CellWidth)))
+	fy := int(math.Ceil(y / float64(sp.CellHeight)))
 	return fx, fy
 }
 
