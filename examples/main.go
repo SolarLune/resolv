@@ -46,6 +46,7 @@ func NewGame() *Game {
 		NewWorldLineTest(g),
 		// NewWorldMultiShape(g), // MultiShapes are still buggy; gotta fix 'em up
 		NewWorldShapeTest(g),
+		NewWorldDirectTest(g),
 	}
 
 	fontData, _ := truetype.Parse(excelFont)
@@ -88,6 +89,10 @@ func (g *Game) Update() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF2) {
 		g.ShowHelpText = !g.ShowHelpText
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyF4) {
+		ebiten.SetFullscreen(!ebiten.IsFullscreen())
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) {

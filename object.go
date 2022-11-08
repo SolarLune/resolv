@@ -9,7 +9,7 @@ import (
 
 // Object represents an object that can be spread across one or more Cells in a Space. An Object is essentially an AABB (Axis-Aligned Bounding Box) Rectangle.
 type Object struct {
-	Shape         Shape            // A shape for more specific collision-checking.
+	Shape         IShape           // A shape for more specific collision-checking.
 	Space         *Space           // Reference to the Space the Object exists within
 	X, Y, W, H    float64          // Position and size of the Object in the Space
 	TouchingCells []*Cell          // An array of Cells the Object is touching
@@ -140,7 +140,7 @@ func (obj *Object) Tags() []string {
 // SetShape sets the Shape on the Object, in case you need to use precise per-Shape intersection detection. SetShape calls Object.Update() as well, so that it's able to
 // update the Shape's position to match its Object as necessary. (If you don't use this, the Shape's position might not match the Object's, depending on if you set the Shape
 // after you added the Object to a Space and if you don't call Object.Update() yourself afterwards.)
-func (obj *Object) SetShape(shape Shape) {
+func (obj *Object) SetShape(shape IShape) {
 	if obj.Shape != shape {
 		obj.Shape = shape
 		obj.Update()

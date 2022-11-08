@@ -86,12 +86,12 @@ func (world *WorldShapeTest) Draw(screen *ebiten.Image) {
 	if world.Contact != nil {
 
 		for _, p := range world.Contact.Points {
-			world.DrawBigDot(screen, p.X(), p.Y(), color.RGBA{255, 255, 0, 255})
+			DrawBigDot(screen, p.X(), p.Y(), color.RGBA{255, 255, 0, 255})
 		}
 
 		ebitenutil.DrawLine(screen, world.Contact.Center.X(), world.Contact.Center.Y(), world.Contact.Center.X()+world.Contact.MTV.X(), world.Contact.Center.Y()+world.Contact.MTV.Y(), color.RGBA{255, 128, 0, 255})
 
-		world.DrawBigDot(screen, world.Contact.Center.X(), world.Contact.Center.Y(), color.RGBA{255, 128, 255, 255})
+		DrawBigDot(screen, world.Contact.Center.X(), world.Contact.Center.Y(), color.RGBA{255, 128, 255, 255})
 
 	}
 
@@ -110,21 +110,12 @@ func (world *WorldShapeTest) Draw(screen *ebiten.Image) {
 			"This gives best results when not very far into another Shape.",
 			"",
 			"F2: Show / Hide help text",
+			"F4: Toggle fullscreen",
 			"R: Restart world",
 			"E: Next world",
 			"Q: Previous world",
 		)
 
 	}
-
-}
-
-func (world *WorldShapeTest) DrawBigDot(screen *ebiten.Image, ix, iy float64, color color.Color) {
-
-	newImg := ebiten.NewImage(4, 4)
-	newImg.Fill(color)
-	opt := &ebiten.DrawImageOptions{}
-	opt.GeoM.Translate(ix-2, iy-2)
-	screen.DrawImage(newImg, opt)
 
 }

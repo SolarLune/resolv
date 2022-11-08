@@ -112,6 +112,8 @@ func (world *WorldPlatformer) Init() {
 
 	rampShape := resolv.NewConvexPolygon(
 		0, 0,
+
+		0, 0,
 		2, 0, // The extra 2 pixels here make it so the Player doesn't get stuck for a frame or two when running up the ramp.
 		ramp.W-2, ramp.H, // Same here; an extra 2 pixels makes it so that dismounting the ramp is nice and easy
 		ramp.W, ramp.H,
@@ -445,6 +447,7 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 			"",
 			"F1: Toggle Debug View",
 			"F2: Show / Hide help text",
+			"F4: Toggle fullscreen",
 			"R: Restart world",
 			"E: Next world",
 			"Q: Previous world",

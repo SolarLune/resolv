@@ -168,22 +168,26 @@ func Init() {
     // Then we add the Object to the Space.
     space.Add(playerObj)
 
+    // Note that we can just use the shapes directly as well.
+
     stairs = resolv.NewObject(96, 128, 16, 16)
 
-    // Here, we use resolvl.NewConvexPolygon() to create a new ConvexPolygon Shape. It takes 
+    // Here, we use resolv.NewConvexPolygon() to create a new ConvexPolygon Shape. It takes 
     // a series of float64 values indicating the X and Y positions of each vertex; the call 
     // below, for example, creates a triangle.
 
     stairs.SetShape(resolv.NewConvexPolygon(
+        0, 0, // Position of the polygon
+
         16, 0, // (x, y) pair for the first vertex
         16, 16, // (x, y) pair for the second vertex
         0, 16, // (x, y) pair for the third and last vertex
     ))
 
-    // 0
-    // |\
-    // | \
-    // |  \
+    //     0
+    //    /|
+    //   / |
+    //  /  |
     // 2---1
 
     // Note that the vertices are in clockwise order. They can be in either clockwise or 
@@ -203,7 +207,7 @@ func Update() {
     if intersection := playerObj.Shape.Intersection(dx, 0, stairs.Shape); intersection != nil {
         
         // We are colliding with the stairs shape, so we can move according
-        // to the delta to get out of it.
+        // to the delta (MTV) to get out of it.
         dx = intersection.MTV.X()
 
         // You might want to move a bit less (say, 0.1) than the delta to

@@ -9,7 +9,8 @@ import (
 	"github.com/solarlune/resolv"
 )
 
-var circleBuffer map[resolv.Shape]*ebiten.Image = map[resolv.Shape]*ebiten.Image{}
+var circleBuffer map[resolv.IShape]*ebiten.Image = map[resolv.IShape]*ebiten.Image{}
+var bigDotImg *ebiten.Image
 
 func DrawPolygon(screen *ebiten.Image, shape *resolv.ConvexPolygon, color color.Color) {
 
@@ -33,23 +34,23 @@ func DrawCircle(screen *ebiten.Image, circle *resolv.Circle, drawColor color.Col
 	// when necessary.
 
 	if _, exists := circleBuffer[circle]; !exists {
-		newImg := ebiten.NewImage(int(circle.Radius)*2, int(circle.Radius)*2)
+		newImg := ebiten.NewImage(int(circle.Radius())*2, int(circle.Radius())*2)
 
 		newImg.Set(int(circle.X), int(circle.Y), color.White)
 
 		stepCount := float64(32)
 
 		// Half image width and height.
-		hw := circle.Radius
-		hh := circle.Radius
+		hw := circle.Radius()
+		hh := circle.Radius()
 
 		for i := 0; i < int(stepCount); i++ {
 
-			x := (math.Sin(math.Pi*2*float64(i)/stepCount) * (circle.Radius - 2)) + hw
-			y := (math.Cos(math.Pi*2*float64(i)/stepCount) * (circle.Radius - 2)) + hh
+			x := (math.Sin(math.Pi*2*float64(i)/stepCount) * (circle.Radius() - 2)) + hw
+			y := (math.Cos(math.Pi*2*float64(i)/stepCount) * (circle.Radius() - 2)) + hh
 
-			x2 := (math.Sin(math.Pi*2*float64(i+1)/stepCount) * (circle.Radius - 2)) + hw
-			y2 := (math.Cos(math.Pi*2*float64(i+1)/stepCount) * (circle.Radius - 2)) + hh
+			x2 := (math.Sin(math.Pi*2*float64(i+1)/stepCount) * (circle.Radius() - 2)) + hw
+			y2 := (math.Cos(math.Pi*2*float64(i+1)/stepCount) * (circle.Radius() - 2)) + hh
 
 			ebitenutil.DrawLine(newImg, x, y, x2, y2, color.White)
 
@@ -60,7 +61,21 @@ func DrawCircle(screen *ebiten.Image, circle *resolv.Circle, drawColor color.Col
 	drawOpt := &ebiten.DrawImageOptions{}
 	r, g, b, _ := drawColor.RGBA()
 	drawOpt.ColorM.Scale(float64(r)/65535, float64(g)/65535, float64(b)/65535, 1)
-	drawOpt.GeoM.Translate(circle.X-circle.Radius, circle.Y-circle.Radius)
+	drawOpt.GeoM.Translate(circle.X-circle.Radius(), circle.Y-circle.Radius())
 	screen.DrawImage(circleBuffer[circle], drawOpt)
+
+}
+
+func DrawBigDot(screen *ebiten.Image, x, y float64, drawColor color.Color) {
+
+	if bigDotImg == nil {
+		bigDotImg = ebiten.NewImage(4, 4)
+		bigDotImg.Fill(color.White)
+	}
+
+	opt := &ebiten.DrawImageOptions{}
+	opt.GeoM.Translate(x-2, y-2)
+	opt.ColorM.ScaleWithColor(drawColor)
+	screen.DrawImage(bigDotImg, opt)
 
 }

@@ -158,6 +158,7 @@ func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 			"",
 			"F1: Toggle Debug View",
 			"F2: Show / Hide help text",
+			"F4: Toggle fullscreen",
 			"R: Restart world",
 			"E: Next world",
 			"Q: Previous world",
