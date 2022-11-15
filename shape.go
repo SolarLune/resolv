@@ -402,13 +402,15 @@ func (polygon *ConvexPolygon) Rotation() float64 {
 // SetRotation sets the rotation for the ConvexPolygon; note that the rotation goes counter-clockwise from 0 to pi, and then from -pi at 180 down, back to 0.
 // This can be visualized as follows:
 //
-//  	        (Pi / 2)
-//					|
-//					|
+//	 	        (Pi / 2)
+//						|
+//						|
+//
 // (Pi / -Pi) ------------- (0)
-//					|
-//					|
-//				(-Pi / 2)
+//
+//		|
+//		|
+//	(-Pi / 2)
 //
 // This rotation scheme follows the way math.Atan2() works.
 func (polygon *ConvexPolygon) SetRotation(radians float64) {
@@ -685,6 +687,28 @@ func (cp *ConvexPolygon) FlipV() {
 		v[1] = -v[1]
 	}
 	cp.ReverseVertexOrder()
+
+}
+
+// RecenterPoints recenters the vertices in the polygon, such that they are all equidistant from the center.
+// For example, say you had a polygon with the following three points: {0, 0}, {10, 0}, {0, 16}.
+// After calling cp.RecenterPoints(), the polygon's points would be at {-5, -8}, {5, -8}, {-5, 8}.
+func (cp *ConvexPolygon) RecenterPoints() {
+
+	if len(cp.Points) <= 1 {
+		return
+	}
+
+	offset := vector.Vector{0, 0}
+	for _, p := range cp.Points {
+		vector.In(offset).Add(p)
+	}
+
+	vector.In(offset).Scale(1.0 / float64(len(cp.Points))).Invert()
+
+	for _, p := range cp.Points {
+		vector.In(p).Add(offset)
+	}
 
 }
 
