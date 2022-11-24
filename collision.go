@@ -1,7 +1,7 @@
 package resolv
 
 import (
-	"github.com/kvartborg/vector"
+	"github.com/quartercastle/vector"
 )
 
 // Collision contains the results of an Object.Check() call, and represents a collision between an Object and cells that contain other Objects.

@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/kvartborg/vector"
+	"github.com/quartercastle/vector"
 )
 
 type IShape interface {
