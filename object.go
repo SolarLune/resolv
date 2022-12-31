@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/kvartborg/vector"
+	"github.com/quartercastle/vector"
 )
 
 // Object represents an object that can be spread across one or more Cells in a Space. An Object is essentially an AABB (Axis-Aligned Bounding Box) Rectangle.

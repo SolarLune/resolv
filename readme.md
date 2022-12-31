@@ -233,7 +233,7 @@ Welp, that's about it. If you want to see more info, feel free to examine the ex
 
 ## Dependencies?
 
-Resolv requires just kvartborg's nice and clean [vector](https://github.com/kvartborg/vector) library, and the built-in `math` package. For the examples, [ebiten](https://github.com/hajimehoshi/ebiten), as well as tanema's [gween](https://github.com/tanema/gween) library are also required.
+Resolv requires just quartercastle's nice and clean [vector](https://github.com/quartercastle/vector) library, and the built-in `math` package. For the examples, [ebiten](https://github.com/hajimehoshi/ebiten), as well as tanema's [gween](https://github.com/tanema/gween) library are also required.
 
 ## Shout-out Time!
 

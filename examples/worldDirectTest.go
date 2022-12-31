@@ -6,7 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/kvartborg/vector"
+	"github.com/quartercastle/vector"
 	"github.com/solarlune/resolv"
 )
 
