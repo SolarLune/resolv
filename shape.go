@@ -171,7 +171,6 @@ type ConvexPolygon struct {
 // from X and Y of the first, to X and Y of the last.
 // For example: NewConvexPolygon(30, 20, 0, 0, 10, 0, 10, 10, 0, 10) would create a 10x10 convex
 // polygon square, with the vertices at {0,0}, {10,0}, {10, 10}, and {0, 10}, with the polygon itself occupying a position of 30, 20.
-// Note that the passed values are the positions of the vertices composing the shape, not the position of the shape itself.
 // You can also pass the points using vectors with ConvexPolygon.AddPointsVec().
 func NewConvexPolygon(x, y float64, points ...float64) *ConvexPolygon {
 
@@ -352,10 +351,10 @@ func (cp *ConvexPolygon) Center() vector.Vector {
 func (cp *ConvexPolygon) Project(axis vector.Vector) Projection {
 	axis = axis.Unit()
 	vertices := cp.Transformed()
-	min := axis.Dot(vector.Vector{vertices[0][0], vertices[0][1]})
+	min := dot(axis, vertices[0]) // We use a manual dot function here instead of Vector.Dot() because some idiot (me) smashed the dot product to a range of -1 to 1
 	max := min
 	for i := 1; i < len(vertices); i++ {
-		p := axis.Dot(vector.Vector{vertices[i][0], vertices[i][1]})
+		p := dot(axis, vertices[i])
 		if p < min {
 			min = p
 		} else if p > max {
@@ -598,11 +597,14 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 	case *ConvexPolygon:
 
 		for _, axis := range cp.SATAxes() {
-			if !cp.Project(axis).Overlapping(other.Project(axis)) {
+			pa := cp.Project(axis)
+			pb := other.Project(axis)
+
+			overlap := pa.Overlap(pb)
+
+			if overlap <= 0 {
 				return nil
 			}
-
-			overlap := cp.Project(axis).Overlap(other.Project(axis))
 
 			if smallest.Magnitude() > overlap {
 				smallest = axis.Scale(overlap)
@@ -612,11 +614,14 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 
 		for _, axis := range other.SATAxes() {
 
-			if !cp.Project(axis).Overlapping(other.Project(axis)) {
+			pa := cp.Project(axis)
+			pb := other.Project(axis)
+
+			overlap := pa.Overlap(pb)
+
+			if overlap <= 0 {
 				return nil
 			}
-
-			overlap := cp.Project(axis).Overlap(other.Project(axis))
 
 			if smallest.Magnitude() > overlap {
 				smallest = axis.Scale(overlap)

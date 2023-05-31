@@ -5,12 +5,12 @@ import (
 	"image/color"
 	"math"
 
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/tanema/gween"
 	"github.com/tanema/gween/ease"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/solarlune/resolv"
 )
 
@@ -113,6 +113,8 @@ func (world *WorldPlatformer) Init() {
 	rampShape := resolv.NewConvexPolygon(
 		0, 0,
 
+		// Vertices:
+
 		0, 0,
 		2, 0, // The extra 2 pixels here make it so the Player doesn't get stuck for a frame or two when running up the ramp.
 		ramp.W-2, ramp.H, // Same here; an extra 2 pixels makes it so that dismounting the ramp is nice and easy
@@ -126,8 +128,8 @@ func (world *WorldPlatformer) Init() {
 
 func (world *WorldPlatformer) Update() {
 
-	// Platform movement needs to be done first to make sure there's no space between the top and the player's bottom; otherwise, an alternative might
-	// be to have the platform detect to see if the Player's resting on it, and if so, move the player up manually.
+	// Floating platform movement needs to be done before the player's movement update to make sure there's no space between its top and the player's bottom;
+	// otherwise, an alternative might be to have the platform detect to see if the Player's resting on it, and if so, move the player up manually.
 	y, _, seqDone := world.FloatingPlatformTween.Update(1.0 / 60.0)
 	world.FloatingPlatform.Y = float64(y)
 	if seqDone {
@@ -153,12 +155,12 @@ func (world *WorldPlatformer) Update() {
 
 	// Horizontal movement is only possible when not wallsliding.
 	if player.WallSliding == nil {
-		if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.GamepadAxis(0, 0) > 0.1 {
+		if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.GamepadAxisValue(0, 0) > 0.1 {
 			player.SpeedX += accel
 			player.FacingRight = true
 		}
 
-		if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.GamepadAxis(0, 0) < -0.1 {
+		if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.GamepadAxisValue(0, 0) < -0.1 {
 			player.SpeedX -= accel
 			player.FacingRight = false
 		}
@@ -182,7 +184,7 @@ func (world *WorldPlatformer) Update() {
 	// Check for jumping.
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) || ebiten.IsGamepadButtonPressed(0, 0) || ebiten.IsGamepadButtonPressed(1, 0) {
 
-		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxis(0, 1) > 0.1 || ebiten.GamepadAxis(1, 1) > 0.1) && player.OnGround != nil && player.OnGround.HasTags("platform") {
+		if (ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.GamepadAxisValue(0, 1) > 0.1 || ebiten.GamepadAxisValue(1, 1) > 0.1) && player.OnGround != nil && player.OnGround.HasTags("platform") {
 
 			player.IgnorePlatform = player.OnGround
 
@@ -399,20 +401,18 @@ func (world *WorldPlatformer) Update() {
 
 func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 
-	fmt.Println(world.Space.Objects())
-
 	for _, o := range world.Space.Objects() {
 
 		if o.HasTags("platform") && o != world.FloatingPlatform {
 			drawColor := color.RGBA{180, 100, 0, 255}
-			ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, drawColor)
+			vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
 		} else if o.HasTags("ramp") {
 			drawColor := color.RGBA{255, 50, 100, 255}
 			tri := o.Shape.(*resolv.ConvexPolygon)
 			world.DrawPolygon(screen, tri, drawColor)
 		} else {
 			drawColor := color.RGBA{60, 60, 60, 255}
-			ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, drawColor)
+			vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
 		}
 
 	}
@@ -421,7 +421,7 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 	// that the platform would draw under the solid blocks if it's below it. This way, it always draws on top.
 	o := world.FloatingPlatform
 	drawColor := color.RGBA{180, 100, 0, 255}
-	ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, drawColor)
+	vector.DrawFilledRect(screen, float32(o.X), float32(o.Y), float32(o.W), float32(o.H), drawColor, false)
 
 	player := world.Player.Object
 	playerColor := color.RGBA{0, 255, 60, 255}
@@ -429,7 +429,7 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 		// We draw the player as a different color when jumping so we can visually see when he's in the air.
 		playerColor = color.RGBA{200, 0, 200, 255}
 	}
-	ebitenutil.DrawRect(screen, player.X, player.Y, player.W, player.H, playerColor)
+	vector.DrawFilledRect(screen, float32(player.X), float32(player.Y), float32(player.W), float32(player.H), playerColor, false)
 
 	if world.Game.Debug {
 		world.Game.DebugDraw(screen, world.Space)
@@ -451,8 +451,8 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 			"R: Restart world",
 			"E: Next world",
 			"Q: Previous world",
-			fmt.Sprintf("%d FPS (frames per second)", int(ebiten.CurrentFPS())),
-			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.CurrentTPS())),
+			fmt.Sprintf("%d FPS (frames per second)", int(ebiten.ActualFPS())),
+			fmt.Sprintf("%d TPS (ticks per second)", int(ebiten.ActualTPS())),
 		)
 
 	}
@@ -462,7 +462,7 @@ func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 func (world *WorldPlatformer) DrawPolygon(screen *ebiten.Image, polygon *resolv.ConvexPolygon, color color.Color) {
 
 	for _, line := range polygon.Lines() {
-		ebitenutil.DrawLine(screen, line.Start.X(), line.Start.Y(), line.End.X(), line.End.Y(), color)
+		vector.StrokeLine(screen, float32(line.Start.X()), float32(line.Start.Y()), float32(line.End.X()), float32(line.End.Y()), 1, color, false)
 	}
 
 }
