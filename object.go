@@ -9,24 +9,23 @@ import (
 
 // Object represents an object that can be spread across one or more Cells in a Space. An Object is essentially an AABB (Axis-Aligned Bounding Box) Rectangle.
 type Object struct {
-	Shape         IShape           // A shape for more specific collision-checking.
-	Space         *Space           // Reference to the Space the Object exists within
-	X, Y, W, H    float64          // Position and size of the Object in the Space
-	TouchingCells []*Cell          // An array of Cells the Object is touching
-	Data          interface{}      // A pointer to a user-definable object
-	ignoreList    map[*Object]bool // Set of Objects to ignore when checking for collisions
-	tags          []string         // A list of tags the Object has
+	Shape         IShape      // A shape for more specific collision-checking.
+	Space         *Space      // Reference to the Space the Object exists within
+	X, Y, W, H    float64     // Position and size of the Object in the Space
+	TouchingCells []*Cell     // An array of Cells the Object is touching
+	Data          interface{} // A pointer to a user-definable object
+	ignoreList    []*Object   // Set of Objects to ignore when checking for collisions
+	tags          []string    // A list of tags the Object has
 }
 
 // NewObject returns a new Object of the specified position and size.
 func NewObject(x, y, w, h float64, tags ...string) *Object {
 	o := &Object{
-		X:          x,
-		Y:          y,
-		W:          w,
-		H:          h,
-		tags:       []string{},
-		ignoreList: map[*Object]bool{},
+		X:    x,
+		Y:    y,
+		W:    w,
+		H:    h,
+		tags: []string{},
 	}
 
 	if len(tags) > 0 {
@@ -43,7 +42,7 @@ func (obj *Object) Clone() *Object {
 	if obj.Shape != nil {
 		newObj.SetShape(obj.Shape.Clone())
 	}
-	for k := range obj.ignoreList {
+	for _, k := range obj.ignoreList {
 		newObj.AddToIgnoreList(k)
 	}
 	return newObj
@@ -246,8 +245,26 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 
 	cx, cy, ex, ey := obj.BoundsToSpace(dx, dy)
 
-	objectsAdded := map[*Object]bool{}
-	cellsAdded := map[*Cell]bool{}
+	var objectsAdded []*Object
+	var cellsAdded []*Cell
+
+	isObjectAdded := func(o *Object) bool {
+		for _, o2 := range objectsAdded {
+			if o2 == o {
+				return true
+			}
+		}
+		return false
+	}
+
+	isCellAdded := func(c *Cell) bool {
+		for _, c2 := range cellsAdded {
+			if c2 == c {
+				return true
+			}
+		}
+		return false
+	}
 
 	for y := cy; y <= ey; y++ {
 
@@ -258,17 +275,17 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 				for _, o := range c.Objects {
 
 					// We only want cells that have objects other than the checking object, or that aren't on the ignore list.
-					if ignored := obj.ignoreList[o]; o == obj || ignored {
+					if ignored, _ := obj.InIgnoreList(o); o == obj || ignored {
 						continue
 					}
 
-					if _, added := objectsAdded[o]; (len(tags) == 0 || o.HasTags(tags...)) && !added {
+					if added := isObjectAdded(o); (len(tags) == 0 || o.HasTags(tags...)) && !added {
 
 						cc.Objects = append(cc.Objects, o)
-						objectsAdded[o] = true
-						if _, added := cellsAdded[c]; !added {
+						objectsAdded = append(objectsAdded, o)
+						if added := isCellAdded(c); !added {
 							cc.Cells = append(cc.Cells, c)
-							cellsAdded[c] = true
+							cellsAdded = append(cellsAdded, c)
 						}
 						continue
 
@@ -321,10 +338,24 @@ func (obj *Object) Overlaps(other *Object) bool {
 
 // AddToIgnoreList adds the specified Object to the Object's internal collision ignoral list. Cells that contain the specified Object will not be counted when calling Check().
 func (obj *Object) AddToIgnoreList(ignoreObj *Object) {
-	obj.ignoreList[ignoreObj] = true
+	if exists, _ := obj.InIgnoreList(ignoreObj); !exists {
+		obj.ignoreList = append(obj.ignoreList, ignoreObj)
+	}
 }
 
 // RemoveFromIgnoreList removes the specified Object from the Object's internal collision ignoral list. Objects removed from this list will once again be counted for Check().
 func (obj *Object) RemoveFromIgnoreList(ignoreObj *Object) {
-	delete(obj.ignoreList, ignoreObj)
+	if exists, i := obj.InIgnoreList(ignoreObj); exists {
+		obj.ignoreList = append(obj.ignoreList[:i], obj.ignoreList[i+1:]...)
+	}
+}
+
+// InIgnoreList returns if and where, by index, the specified Object is in the Object's internal collision ignoral list.
+func (obj *Object) InIgnoreList(ignoreObj *Object) (bool, int) {
+	for i, o := range obj.ignoreList {
+		if o == ignoreObj {
+			return true, i
+		}
+	}
+	return false, -1
 }
