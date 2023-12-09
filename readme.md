@@ -112,7 +112,7 @@ func Update() {
         // contact with that Object. So, we call Collision.ContactWithObject() on the 
         // first Object that we came into contact with (which is stored in the Collision).
 
-        // Collision.ContactWithObject() will return a vector.Vector, indicating how much
+        // Collision.ContactWithObject() will return a Vector, indicating how much
         // distance to move to come into contact with the specified Object.
 
         // We could also come into contact with the cell to the right using 
@@ -240,3 +240,9 @@ Resolv requires just quartercastle's nice and clean [vector](https://github.com/
 Thanks to the people who stopped by on my [YouTube Golang gamedev streams](https://www.youtube.com/c/SolarLune) - they helped out a lot with a couple of the technical aspects of getting Go to do what I needed to, haha.
 
 If you want to support development, feel free to throw me a couple of bones over on my [Patreon](https://www.patreon.com/SolarLune) or [itch.io](https://solarlune.itch.io/) / [Steam](https://store.steampowered.com/app/1269310/MasterPlan/) pages. I really appreciate it - thanks!
+
+## To-do List
+
+- [ ] Allow for cells that are less than 1 unit large (and so Spaces can have cell sizes of, say, 0.1 units)
+- [ ] Custom Vector struct for speed, consistency, and to reduce third-party imports
+- [ ] Intersection MTV works properly for external normals, but not internal normals of a polygon

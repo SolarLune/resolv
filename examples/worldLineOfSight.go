@@ -77,16 +77,16 @@ func (world *WorldLineTest) Update() {
 	}
 
 	if col := world.Player.Check(dx, 0, "solid"); col != nil {
-		dx = col.ContactWithObject(col.Objects[0]).X()
+		dx = col.ContactWithObject(col.Objects[0]).X
 	}
 
-	world.Player.X += dx
+	world.Player.Position.X += dx
 
 	if col := world.Player.Check(0, dy, "solid"); col != nil {
-		dy = col.ContactWithObject(col.Objects[0]).Y()
+		dy = col.ContactWithObject(col.Objects[0]).Y
 	}
 
-	world.Player.Y += dy
+	world.Player.Position.Y += dy
 
 	world.Player.Update()
 
@@ -99,7 +99,7 @@ func (world *WorldLineTest) Draw(screen *ebiten.Image) {
 		if o.HasTags("player") {
 			drawColor = color.RGBA{0, 255, 0, 255}
 		}
-		ebitenutil.DrawRect(screen, o.X, o.Y, o.W, o.H, drawColor)
+		ebitenutil.DrawRect(screen, o.Position.X, o.Position.Y, o.Size.X, o.Size.Y, drawColor)
 	}
 
 	mouseX, mouseY := ebiten.CursorPosition()

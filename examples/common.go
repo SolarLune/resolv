@@ -22,7 +22,7 @@ func DrawPolygon(screen *ebiten.Image, shape *resolv.ConvexPolygon, color color.
 		if i < len(verts)-1 {
 			next = verts[i+1]
 		}
-		ebitenutil.DrawLine(screen, vert.X(), vert.Y(), next.X(), next.Y(), color)
+		ebitenutil.DrawLine(screen, vert.X, vert.Y, next.X, next.Y, color)
 
 	}
 
@@ -36,7 +36,7 @@ func DrawCircle(screen *ebiten.Image, circle *resolv.Circle, drawColor color.Col
 	if _, exists := circleBuffer[circle]; !exists {
 		newImg := ebiten.NewImage(int(circle.Radius())*2, int(circle.Radius())*2)
 
-		newImg.Set(int(circle.X), int(circle.Y), color.White)
+		newImg.Set(int(circle.Position().X), int(circle.Position().Y), color.White)
 
 		stepCount := float64(32)
 
@@ -61,12 +61,12 @@ func DrawCircle(screen *ebiten.Image, circle *resolv.Circle, drawColor color.Col
 	drawOpt := &ebiten.DrawImageOptions{}
 	r, g, b, _ := drawColor.RGBA()
 	drawOpt.ColorM.Scale(float64(r)/65535, float64(g)/65535, float64(b)/65535, 1)
-	drawOpt.GeoM.Translate(circle.X-circle.Radius(), circle.Y-circle.Radius())
+	drawOpt.GeoM.Translate(circle.Position().X-circle.Radius(), circle.Position().Y-circle.Radius())
 	screen.DrawImage(circleBuffer[circle], drawOpt)
 
 }
 
-func DrawBigDot(screen *ebiten.Image, x, y float64, drawColor color.Color) {
+func DrawBigDot(screen *ebiten.Image, position resolv.Vector, drawColor color.Color) {
 
 	if bigDotImg == nil {
 		bigDotImg = ebiten.NewImage(4, 4)
@@ -74,7 +74,7 @@ func DrawBigDot(screen *ebiten.Image, x, y float64, drawColor color.Color) {
 	}
 
 	opt := &ebiten.DrawImageOptions{}
-	opt.GeoM.Translate(x-2, y-2)
+	opt.GeoM.Translate(position.X-2, position.Y-2)
 	opt.ColorM.ScaleWithColor(drawColor)
 	screen.DrawImage(bigDotImg, opt)
 

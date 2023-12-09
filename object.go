@@ -3,15 +3,14 @@ package resolv
 import (
 	"math"
 	"sort"
-
-	"github.com/quartercastle/vector"
 )
 
 // Object represents an object that can be spread across one or more Cells in a Space. An Object is essentially an AABB (Axis-Aligned Bounding Box) Rectangle.
 type Object struct {
 	Shape         IShape           // A shape for more specific collision-checking.
 	Space         *Space           // Reference to the Space the Object exists within
-	X, Y, W, H    float64          // Position and size of the Object in the Space
+	Position      Vector           // The position of the Object in the Space
+	Size          Vector           // The size of the Object in the Space
 	TouchingCells []*Cell          // An array of Cells the Object is touching
 	Data          interface{}      // A pointer to a user-definable object
 	ignoreList    map[*Object]bool // Set of Objects to ignore when checking for collisions
@@ -21,10 +20,8 @@ type Object struct {
 // NewObject returns a new Object of the specified position and size.
 func NewObject(x, y, w, h float64, tags ...string) *Object {
 	o := &Object{
-		X:          x,
-		Y:          y,
-		W:          w,
-		H:          h,
+		Position:   NewVector(x, y),
+		Size:       NewVector(w, h),
 		tags:       []string{},
 		ignoreList: map[*Object]bool{},
 	}
@@ -38,7 +35,7 @@ func NewObject(x, y, w, h float64, tags ...string) *Object {
 
 // Clone clones the Object with its properties into another Object. It also clones the Object's Shape (if it has one).
 func (obj *Object) Clone() *Object {
-	newObj := NewObject(obj.X, obj.Y, obj.W, obj.H, obj.Tags()...)
+	newObj := NewObject(obj.Position.X, obj.Position.Y, obj.Size.X, obj.Size.Y, obj.Tags()...)
 	newObj.Data = obj.Data
 	if obj.Shape != nil {
 		newObj.SetShape(obj.Shape.Clone())
@@ -85,7 +82,7 @@ func (obj *Object) Update() {
 	}
 
 	if obj.Shape != nil {
-		obj.Shape.SetPosition(obj.X, obj.Y)
+		obj.Shape.SetPosition(obj.Position.X, obj.Position.Y)
 	}
 
 }
@@ -149,8 +146,8 @@ func (obj *Object) SetShape(shape IShape) {
 
 // BoundsToSpace returns the Space coordinates of the shape (x, y, w, and h), given its world position and size, and a supposed movement of dx and dy.
 func (obj *Object) BoundsToSpace(dx, dy float64) (int, int, int, int) {
-	cx, cy := obj.Space.WorldToSpace(obj.X+dx, obj.Y+dy)
-	ex, ey := obj.Space.WorldToSpace(obj.X+obj.W+dx-1, obj.Y+obj.H+dy-1)
+	cx, cy := obj.Space.WorldToSpace(obj.Position.X+dx, obj.Position.Y+dy)
+	ex, ey := obj.Space.WorldToSpace(obj.Position.X+obj.Size.X+dx-1, obj.Position.Y+obj.Size.Y+dy-1)
 	return cx, cy, ex, ey
 }
 
@@ -176,13 +173,13 @@ func (obj *Object) SharesCellsTags(tags ...string) bool {
 
 // Center returns the center position of the Object.
 func (obj *Object) Center() (float64, float64) {
-	return obj.X + (obj.W / 2.0), obj.Y + (obj.H / 2.0)
+	return obj.Position.X + (obj.Size.X / 2.0), obj.Position.Y + (obj.Size.Y / 2.0)
 }
 
 // SetCenter sets the Object such that its center is at the X and Y position given.
 func (obj *Object) SetCenter(x, y float64) {
-	obj.X = x - (obj.W / 2)
-	obj.Y = y - (obj.H / 2)
+	obj.Position.X = x - (obj.Size.X / 2)
+	obj.Position.Y = y - (obj.Size.Y / 2)
 }
 
 // CellPosition returns the cellular position of the Object's center in the Space.
@@ -192,29 +189,29 @@ func (obj *Object) CellPosition() (int, int) {
 
 // SetRight sets the X position of the Object so the right edge is at the X position given.
 func (obj *Object) SetRight(x float64) {
-	obj.X = x - obj.W
+	obj.Position.X = x - obj.Size.X
 }
 
 // SetBottom sets the Y position of the Object so that the bottom edge is at the Y position given.
 func (obj *Object) SetBottom(y float64) {
-	obj.Y = y - obj.H
+	obj.Position.Y = y - obj.Size.Y
 }
 
 // Bottom returns the bottom Y coordinate of the Object (i.e. object.Y + object.H).
 func (obj *Object) Bottom() float64 {
-	return obj.Y + obj.H
+	return obj.Position.Y + obj.Size.Y
 }
 
 // Right returns the right X coordinate of the Object (i.e. object.X + object.W).
 func (obj *Object) Right() float64 {
-	return obj.X + obj.W
+	return obj.Position.X + obj.Size.X
 }
 
-func (obj *Object) SetBounds(topLeft, bottomRight vector.Vector) {
-	obj.X = topLeft[0]
-	obj.Y = topLeft[1]
-	obj.W = bottomRight[0] - obj.X
-	obj.H = bottomRight[1] - obj.Y
+func (obj *Object) SetBounds(topLeft, bottomRight Vector) {
+	obj.Position.X = topLeft.X
+	obj.Position.Y = topLeft.Y
+	obj.Size.X = bottomRight.X - obj.Position.X
+	obj.Size.Y = bottomRight.Y - obj.Position.Y
 }
 
 // Check checks the space around the object using the designated delta movement (dx and dy). This is done by querying the containing Space's Cells
@@ -226,7 +223,7 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 		return nil
 	}
 
-	cc := NewCollision()
+	cc := newCollision()
 	cc.checkingObject = obj
 
 	if dx < 0 {
@@ -290,13 +287,13 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 	// oy := cc.checkingObject.Y + (cc.checkingObject.H / 2)
 
 	ox, oy := cc.checkingObject.Center()
-	oc := vector.Vector{ox, oy}
+	oc := Vector{ox, oy}
 
 	sort.Slice(cc.Objects, func(i, j int) bool {
 
 		ix, iy := cc.Objects[i].Center()
 		jx, jy := cc.Objects[j].Center()
-		return vector.Vector{ix, iy}.Sub(oc).Magnitude() < vector.Vector{jx, jy}.Sub(oc).Magnitude()
+		return Vector{ix, iy}.Sub(oc).Magnitude() < Vector{jx, jy}.Sub(oc).Magnitude()
 
 	})
 
@@ -305,8 +302,8 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 
 	sort.Slice(cc.Cells, func(i, j int) bool {
 
-		return vector.Vector{float64(cc.Cells[i].X*cw + (cw / 2)), float64(cc.Cells[i].Y*ch + (ch / 2))}.Sub(oc).Magnitude() <
-			vector.Vector{float64(cc.Cells[j].X*cw + (cw / 2)), float64(cc.Cells[j].Y*ch + (ch / 2))}.Sub(oc).Magnitude()
+		return Vector{float64(cc.Cells[i].X*cw + (cw / 2)), float64(cc.Cells[i].Y*ch + (ch / 2))}.Sub(oc).Magnitude() <
+			Vector{float64(cc.Cells[j].X*cw + (cw / 2)), float64(cc.Cells[j].Y*ch + (ch / 2))}.Sub(oc).Magnitude()
 
 	})
 
@@ -316,7 +313,7 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 
 // Overlaps returns if an Object overlaps another Object.
 func (obj *Object) Overlaps(other *Object) bool {
-	return other.X <= obj.X+obj.W && other.X+other.W >= obj.X && other.Y <= obj.Y+obj.H && other.Y+other.H >= obj.Y
+	return other.Position.X <= obj.Position.X+obj.Size.X && other.Position.X+other.Size.X >= obj.Position.X && other.Position.Y <= obj.Position.Y+obj.Size.Y && other.Position.Y+other.Size.Y >= obj.Position.Y
 }
 
 // AddToIgnoreList adds the specified Object to the Object's internal collision ignoral list. Cells that contain the specified Object will not be counted when calling Check().

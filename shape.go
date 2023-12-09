@@ -1,10 +1,9 @@
 package resolv
 
 import (
+	"fmt"
 	"math"
 	"sort"
-
-	"github.com/quartercastle/vector"
 )
 
 type IShape interface {
@@ -13,19 +12,25 @@ type IShape interface {
 	// were in a different relative location). If an Intersection is found, a ContactSet will be returned, giving information regarding
 	// the intersection.
 	Intersection(dx, dy float64, other IShape) *ContactSet
+	// IntersectionForEach runs a specified function for each contact set caused by contact with any of
+	// the shapes passed. If the custom function returns false, then the intersection testing stops
+	// iterating through further objects.
+	IntersectionForEach(dx, dy float64, f func(c *ContactSet) bool, others ...IShape)
 	// Bounds returns the top-left and bottom-right points of the Shape.
-	Bounds() (vector.Vector, vector.Vector)
+	Bounds() (Vector, Vector)
 	// Position returns the X and Y position of the Shape.
-	Position() (float64, float64)
+	Position() Vector
 	// SetPosition allows you to place a Shape at another location.
 	SetPosition(x, y float64)
+	// SetPositionVec allows you to place a Shape at another location using a Vector.
+	SetPositionVec(position Vector)
 
+	// Rotation returns the current rotation value for the Shape.
 	Rotation() float64
-	SetRotation(radians float64)
 
-	// Rotate rotates the IShape by the radians provided.
+	// SetRotation sets the rotation value for the Shape.
 	// Note that the rotation goes counter-clockwise from 0 at right to pi/2 in the upwards direction,
-	// pi / -pi at left, -pi/2 in the downwards direction, and finally back to 0.
+	// pi or -pi at left, -pi/2 in the downwards direction, and finally back to 0.
 	// This can be visualized as follows:
 	//
 	//   U
@@ -36,18 +41,37 @@ type IShape interface {
 	// U: pi/2
 	// L: pi / -pi
 	// D: -pi/2
+	SetRotation(radians float64)
+
+	// Rotate rotates the IShape by the radians provided.
+	// Note that the rotation goes counter-clockwise from 0 at right to pi/2 in the upwards direction,
+	// pi or -pi at left, -pi/2 in the downwards direction, and finally back to 0.
+	// This can be visualized as follows:
 	//
-	// This rotation scheme follows the way math.Atan2() works.
-	// Note that Rotate(), of course, doesn't do anything for circles for obvious reasons.
+	//   U
+	// L   R
+	//   D
+	//
+	// R: 0
+	// U: pi/2
+	// L: pi / -pi
+	// D: -pi/2
 	Rotate(radians float64)
 
-	Scale() (float64, float64) // Returns the scale of the IShape (the radius for Circles).
-	SetScale(w, h float64)     // Sets the overall scale of the IShape; 1.0 is 100% scale, 2.0 is 200%, and so on. The greater of these values is used for the radius for Circles.
+	Scale() Vector // Returns the scale of the IShape (the radius for Circles).
+
+	// Sets the overall scale of the IShape; 1.0 is 100% scale, 2.0 is 200%, and so on.
+	// The greater of these values is used for the radius for Circles.
+	SetScale(w, h float64)
+
+	// Sets the overall scale of the IShape using the provided Vector; 1.0 is 100% scale, 2.0 is 200%, and so on.
+	// The greater of these values is used for the radius for Circles.
+	SetScaleVec(vec Vector)
 
 	// Move moves the IShape by the x and y values provided.
 	Move(x, y float64)
 	// MoveVec moves the IShape by the movement values given in the vector provided.
-	MoveVec(vec vector.Vector)
+	MoveVec(vec Vector)
 
 	// Clone duplicates the IShape.
 	Clone() IShape
@@ -56,74 +80,74 @@ type IShape interface {
 // A collidingLine is a helper shape used to determine if two ConvexPolygon lines intersect; you can't create a collidingLine to use as a Shape.
 // Instead, you can create a ConvexPolygon, specify two points, and set its Closed value to false (or use NewLine(), as this does it for you).
 type collidingLine struct {
-	Start, End vector.Vector
+	Start, End Vector
 }
 
 func new_line(x, y, x2, y2 float64) *collidingLine {
 	return &collidingLine{
-		Start: vector.Vector{x, y},
-		End:   vector.Vector{x2, y2},
+		Start: Vector{x, y},
+		End:   Vector{x2, y2},
 	}
 }
 
-func (line *collidingLine) Project(axis vector.Vector) vector.Vector {
+func (line *collidingLine) Project(axis Vector) Vector {
 	return line.Vector().Scale(axis.Dot(line.Start.Sub(line.End)))
 }
 
-func (line *collidingLine) Normal() vector.Vector {
+func (line *collidingLine) Normal() Vector {
 	v := line.Vector()
-	return vector.Vector{v[1], -v[0]}.Unit()
+	return Vector{v.Y, -v.X}.Unit()
 }
 
-func (line *collidingLine) Vector() vector.Vector {
-	return line.End.Clone().Sub(line.Start).Unit()
+func (line *collidingLine) Vector() Vector {
+	return line.End.Sub(line.Start).Unit()
 }
 
-// IntersectionPointsLine returns the intersection point of a Line with another Line as a vector.Vector. If no intersection is found, it will return nil.
-func (line *collidingLine) IntersectionPointsLine(other *collidingLine) vector.Vector {
+// IntersectionPointsLine returns the intersection point of a Line with another Line as a Vector, and if the intersection was found.
+func (line *collidingLine) IntersectionPointsLine(other *collidingLine) (Vector, bool) {
 
-	det := (line.End[0]-line.Start[0])*(other.End[1]-other.Start[1]) - (other.End[0]-other.Start[0])*(line.End[1]-line.Start[1])
+	det := (line.End.X-line.Start.X)*(other.End.Y-other.Start.Y) - (other.End.X-other.Start.X)*(line.End.Y-line.Start.Y)
 
 	if det != 0 {
 
 		// MAGIC MATH; the extra + 1 here makes it so that corner cases (literally, lines going through corners) works.
 
 		// lambda := (float32(((line.Y-b.Y)*(b.X2-b.X))-((line.X-b.X)*(b.Y2-b.Y))) + 1) / float32(det)
-		lambda := (((line.Start[1] - other.Start[1]) * (other.End[0] - other.Start[0])) - ((line.Start[0] - other.Start[0]) * (other.End[1] - other.Start[1])) + 1) / det
+		lambda := (((line.Start.Y - other.Start.Y) * (other.End.X - other.Start.X)) - ((line.Start.X - other.Start.X) * (other.End.Y - other.Start.Y)) + 1) / det
 
 		// gamma := (float32(((line.Y-b.Y)*(line.X2-line.X))-((line.X-b.X)*(line.Y2-line.Y))) + 1) / float32(det)
-		gamma := (((line.Start[1] - other.Start[1]) * (line.End[0] - line.Start[0])) - ((line.Start[0] - other.Start[0]) * (line.End[1] - line.Start[1])) + 1) / det
+		gamma := (((line.Start.Y - other.Start.Y) * (line.End.X - line.Start.X)) - ((line.Start.X - other.Start.X) * (line.End.Y - line.Start.Y)) + 1) / det
 
 		if (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1) {
 
 			// Delta
-			dx := line.End[0] - line.Start[0]
-			dy := line.End[1] - line.Start[1]
+			dx := line.End.X - line.Start.X
+			dy := line.End.Y - line.Start.Y
 
 			// dx, dy := line.GetDelta()
 
-			return vector.Vector{line.Start[0] + (lambda * dx), line.Start[1] + (lambda * dy)}
+			return Vector{line.Start.X + (lambda * dx), line.Start.Y + (lambda * dy)}, true
 		}
 
 	}
 
-	return nil
+	return Vector{}, false
 
 }
 
-// IntersectionPointsCircle returns a slice of vector.Vectors, each indicating the intersection point. If no intersection is found, it will return an empty slice.
-func (line *collidingLine) IntersectionPointsCircle(circle *Circle) []vector.Vector {
+// IntersectionPointsCircle returns a slice of Vectors, each indicating the intersection point. If no intersection is found, it will return an empty slice.
+func (line *collidingLine) IntersectionPointsCircle(circle *Circle) []Vector {
 
-	points := []vector.Vector{}
+	points := []Vector{}
 
-	cp := vector.Vector{circle.X, circle.Y}
+	cp := circle.position
 	lStart := line.Start.Sub(cp)
 	lEnd := line.End.Sub(cp)
 	diff := lEnd.Sub(lStart)
 
-	a := diff[0]*diff[0] + diff[1]*diff[1]
-	b := 2 * ((diff[0] * lStart[0]) + (diff[1] * lStart[1]))
-	c := (lStart[0] * lStart[0]) + (lStart[1] * lStart[1]) - (circle.radius * circle.radius)
+	a := diff.X*diff.X + diff.Y*diff.Y
+	b := 2 * ((diff.X * lStart.X) + (diff.Y * lStart.Y))
+	c := (lStart.X * lStart.X) + (lStart.Y * lStart.Y) - (circle.radius * circle.radius)
 
 	det := b*b - (4 * a * c)
 
@@ -134,7 +158,7 @@ func (line *collidingLine) IntersectionPointsCircle(circle *Circle) []vector.Vec
 		t := -b / (2 * a)
 
 		if t >= 0 && t <= 1 {
-			points = append(points, vector.Vector{line.Start[0] + t*diff[0], line.Start[1] + t*diff[1]})
+			points = append(points, Vector{line.Start.X + t*diff.X, line.Start.Y + t*diff.Y})
 		}
 
 	} else {
@@ -143,11 +167,11 @@ func (line *collidingLine) IntersectionPointsCircle(circle *Circle) []vector.Vec
 
 		// We have to ensure t is between 0 and 1; otherwise, the collision points are on the circle as though the lines were infinite in length.
 		if t >= 0 && t <= 1 {
-			points = append(points, vector.Vector{line.Start[0] + t*diff[0], line.Start[1] + t*diff[1]})
+			points = append(points, Vector{line.Start.X + t*diff.X, line.Start.Y + t*diff.Y})
 		}
 		t = (-b - math.Sqrt(det)) / (2 * a)
 		if t >= 0 && t <= 1 {
-			points = append(points, vector.Vector{line.Start[0] + t*diff[0], line.Start[1] + t*diff[1]})
+			points = append(points, Vector{line.Start.X + t*diff.X, line.Start.Y + t*diff.Y})
 		}
 
 	}
@@ -159,11 +183,13 @@ func (line *collidingLine) IntersectionPointsCircle(circle *Circle) []vector.Vec
 // ConvexPolygon represents a series of points, connected by lines, constructing a convex shape.
 // The polygon has a position, a scale, a rotation, and may or may not be closed.
 type ConvexPolygon struct {
-	Points         []vector.Vector // Points represents the points constructing the ConvexPolygon.
-	X, Y           float64         // X and Y are the position of the ConvexPolygon.
-	ScaleW, ScaleH float64         // The width and height for scaling
-	rotation       float64         // How many radians the ConvexPolygon is rotated around in the viewing vector (Z).
-	Closed         bool            // Closed is whether the ConvexPolygon is closed or not; only takes effect if there are more than 2 points.
+	Points   []Vector // Points represents the points constructing the ConvexPolygon.
+	position Vector
+	scale    Vector
+	rotation float64 // How many radians the ConvexPolygon is rotated around in the viewing vector (Z).
+	// X, Y           float64  // X and Y are the position of the ConvexPolygon.
+	// ScaleW, ScaleH float64 // The width and height for scaling
+	Closed bool // Closed is whether the ConvexPolygon is closed or not; only takes effect if there are more than 2 points.
 }
 
 // NewConvexPolygon creates a new convex polygon at the position given, from the provided set of X and Y positions of 2D points (or vertices).
@@ -179,11 +205,13 @@ func NewConvexPolygon(x, y float64, points ...float64) *ConvexPolygon {
 	// }
 
 	cp := &ConvexPolygon{
-		X:      x,
-		Y:      y,
-		ScaleW: 1,
-		ScaleH: 1,
-		Points: []vector.Vector{},
+		position: NewVector(x, y),
+		scale:    NewVector(1, 1),
+		// X:      x,
+		// Y:      y,
+		// ScaleW: 1,
+		// ScaleH: 1,
+		Points: []Vector{},
 		Closed: true,
 	}
 
@@ -194,27 +222,35 @@ func NewConvexPolygon(x, y float64, points ...float64) *ConvexPolygon {
 	return cp
 }
 
+func NewConvexPolygonVec(position Vector, points ...Vector) *ConvexPolygon {
+
+	cp := &ConvexPolygon{
+		position: position,
+		scale:    NewVector(1, 1),
+		Points:   []Vector{},
+		Closed:   true,
+	}
+
+	if len(points) > 0 {
+		cp.AddPointsVec(points...)
+	}
+
+	return cp
+
+}
+
 // Clone returns a clone of the ConvexPolygon as an IShape.
 func (cp *ConvexPolygon) Clone() IShape {
 
-	points := []vector.Vector{}
+	points := append(make([]Vector, 0, len(cp.Points)), cp.Points...)
 
-	for _, point := range cp.Points {
-		points = append(points, point.Clone())
-	}
-
-	newPoly := NewConvexPolygon(cp.X, cp.Y)
+	newPoly := NewConvexPolygon(cp.position.X, cp.position.Y)
 	newPoly.rotation = cp.rotation
-	newPoly.ScaleW = cp.ScaleW
-	newPoly.ScaleH = cp.ScaleH
+	newPoly.scale = cp.scale
 	newPoly.AddPointsVec(points...)
 	newPoly.Closed = cp.Closed
-	return newPoly
-}
 
-// AddPointsVec allows you to add points to the ConvexPolygon with a slice of vector.Vectors, each indicating a point / vertex.
-func (cp *ConvexPolygon) AddPointsVec(points ...vector.Vector) {
-	cp.Points = append(cp.Points, points...)
+	return newPoly
 }
 
 // AddPoints allows you to add points to the ConvexPolygon with a slice or selection of float64s, with each pair indicating an X or Y value for
@@ -227,8 +263,13 @@ func (cp *ConvexPolygon) AddPoints(vertexPositions ...float64) {
 		panic("Error: AddPoints called with a non-even amount of vertex positions.")
 	}
 	for v := 0; v < len(vertexPositions); v += 2 {
-		cp.Points = append(cp.Points, vector.Vector{vertexPositions[v], vertexPositions[v+1]})
+		cp.Points = append(cp.Points, Vector{vertexPositions[v], vertexPositions[v+1]})
 	}
+}
+
+// AddPointsVec allows you to add points to the ConvexPolygon with a slice of Vectors, each indicating a point / vertex.
+func (cp *ConvexPolygon) AddPointsVec(points ...Vector) {
+	cp.Points = append(cp.Points, points...)
 }
 
 // Lines returns a slice of transformed internalLines composing the ConvexPolygon.
@@ -248,7 +289,7 @@ func (cp *ConvexPolygon) Lines() []*collidingLine {
 			break
 		}
 
-		line := new_line(start[0], start[1], end[0], end[1])
+		line := new_line(start.X, start.Y, end.X, end.Y)
 
 		lines = append(lines, line)
 
@@ -259,41 +300,41 @@ func (cp *ConvexPolygon) Lines() []*collidingLine {
 }
 
 // Transformed returns the ConvexPolygon's points / vertices, transformed according to the ConvexPolygon's position.
-func (cp *ConvexPolygon) Transformed() []vector.Vector {
-	transformed := []vector.Vector{}
+func (cp *ConvexPolygon) Transformed() []Vector {
+	transformed := []Vector{}
 	for _, point := range cp.Points {
-		p := vector.Vector{point[0] * cp.ScaleW, point[1] * cp.ScaleH}
+		p := Vector{point.X * cp.scale.X, point.Y * cp.scale.Y}
 		if cp.rotation != 0 {
-			vector.In(p).Rotate(-cp.rotation)
+			p = p.Rotate(-cp.rotation)
 		}
-		transformed = append(transformed, vector.Vector{p[0] + cp.X, p[1] + cp.Y})
+		transformed = append(transformed, Vector{p.X + cp.position.X, p.Y + cp.position.Y})
 	}
 	return transformed
 }
 
 // Bounds returns two Vectors, comprising the top-left and bottom-right positions of the bounds of the
 // ConvexPolygon, post-transformation.
-func (cp *ConvexPolygon) Bounds() (vector.Vector, vector.Vector) {
+func (cp *ConvexPolygon) Bounds() (Vector, Vector) {
 
 	transformed := cp.Transformed()
 
-	topLeft := vector.Vector{transformed[0][0], transformed[0][1]}
-	bottomRight := topLeft.Clone()
+	topLeft := Vector{transformed[0].X, transformed[0].Y}
+	bottomRight := topLeft
 
 	for i := 0; i < len(transformed); i++ {
 
 		point := transformed[i]
 
-		if point[0] < topLeft[0] {
-			topLeft[0] = point[0]
-		} else if point[0] > bottomRight[0] {
-			bottomRight[0] = point[0]
+		if point.X < topLeft.X {
+			topLeft.X = point.X
+		} else if point.X > bottomRight.X {
+			bottomRight.X = point.X
 		}
 
-		if point[1] < topLeft[1] {
-			topLeft[1] = point[1]
-		} else if point[1] > bottomRight[1] {
-			bottomRight[1] = point[1]
+		if point.Y < topLeft.Y {
+			topLeft.Y = point.Y
+		} else if point.Y > bottomRight.Y {
+			bottomRight.Y = point.Y
 		}
 
 	}
@@ -301,60 +342,60 @@ func (cp *ConvexPolygon) Bounds() (vector.Vector, vector.Vector) {
 }
 
 // Position returns the position of the ConvexPolygon.
-func (cp *ConvexPolygon) Position() (float64, float64) {
-	return cp.X, cp.Y
+func (cp *ConvexPolygon) Position() Vector {
+	return cp.position
 }
 
 // SetPosition sets the position of the ConvexPolygon. The offset of the vertices compared to the X and Y position is relative to however
 // you initially defined the polygon and added the vertices.
 func (cp *ConvexPolygon) SetPosition(x, y float64) {
-	cp.X = x
-	cp.Y = y
+	cp.position.X = x
+	cp.position.Y = y
 }
 
-// SetPositionVec allows you to set the position of the ConvexPolygon using a vector.Vector. The offset of the vertices compared to the X and Y
+// SetPositionVec allows you to set the position of the ConvexPolygon using a Vector. The offset of the vertices compared to the X and Y
 // position is relative to however you initially defined the polygon and added the vertices.
-func (cp *ConvexPolygon) SetPositionVec(vec vector.Vector) {
-	cp.X = vec.X()
-	cp.Y = vec.Y()
+func (cp *ConvexPolygon) SetPositionVec(vec Vector) {
+	cp.position.X = vec.X
+	cp.position.Y = vec.Y
 }
 
 // Move translates the ConvexPolygon by the designated X and Y values.
 func (cp *ConvexPolygon) Move(x, y float64) {
-	cp.X += x
-	cp.Y += y
+	cp.position.X += x
+	cp.position.Y += y
 }
 
-// MoveVec translates the ConvexPolygon by the designated vector.Vector.
-func (cp *ConvexPolygon) MoveVec(vec vector.Vector) {
-	cp.X += vec.X()
-	cp.Y += vec.Y()
+// MoveVec translates the ConvexPolygon by the designated Vector.
+func (cp *ConvexPolygon) MoveVec(vec Vector) {
+	cp.position.X += vec.X
+	cp.position.Y += vec.Y
 }
 
 // Center returns the transformed Center of the ConvexPolygon.
-func (cp *ConvexPolygon) Center() vector.Vector {
+func (cp *ConvexPolygon) Center() Vector {
 
-	pos := vector.Vector{0, 0}
+	pos := Vector{0, 0}
 
 	for _, v := range cp.Transformed() {
 		pos.Add(v)
 	}
 
-	pos[0] /= float64(len(cp.Transformed()))
-	pos[1] /= float64(len(cp.Transformed()))
+	pos.X /= float64(len(cp.Transformed()))
+	pos.Y /= float64(len(cp.Transformed()))
 
 	return pos
 
 }
 
 // Project projects (i.e. flattens) the ConvexPolygon onto the provided axis.
-func (cp *ConvexPolygon) Project(axis vector.Vector) Projection {
+func (cp *ConvexPolygon) Project(axis Vector) Projection {
 	axis = axis.Unit()
 	vertices := cp.Transformed()
-	min := dot(axis, vertices[0]) // We use a manual dot function here instead of Vector.Dot() because some idiot (me) smashed the dot product to a range of -1 to 1
+	min := axis.Dot(vertices[0])
 	max := min
 	for i := 1; i < len(vertices); i++ {
-		p := dot(axis, vertices[i])
+		p := axis.Dot(vertices[i])
 		if p < min {
 			min = p
 		} else if p > max {
@@ -365,9 +406,9 @@ func (cp *ConvexPolygon) Project(axis vector.Vector) Projection {
 }
 
 // SATAxes returns the axes of the ConvexPolygon for SAT intersection testing.
-func (cp *ConvexPolygon) SATAxes() []vector.Vector {
+func (cp *ConvexPolygon) SATAxes() []Vector {
 
-	axes := []vector.Vector{}
+	axes := []Vector{}
 	for _, line := range cp.Lines() {
 		axes = append(axes, line.Normal())
 	}
@@ -375,16 +416,17 @@ func (cp *ConvexPolygon) SATAxes() []vector.Vector {
 
 }
 
-// PointInside returns if a Point (a vector.Vector) is inside the ConvexPolygon.
-func (polygon *ConvexPolygon) PointInside(point vector.Vector) bool {
+// PointInside returns if a Point (a Vector) is inside the ConvexPolygon.
+func (polygon *ConvexPolygon) PointInside(point Vector) bool {
 
-	pointLine := new_line(point[0], point[1], point[0]+999999999999, point[1])
+	// Internally, we test for this by just making a line that extends into infinity and then checking for intersection points.
+	pointLine := new_line(point.X, point.Y, point.X+999999999999, point.Y)
 
 	contactCount := 0
 
 	for _, line := range polygon.Lines() {
 
-		if line.IntersectionPointsLine(pointLine) != nil {
+		if _, ok := line.IntersectionPointsLine(pointLine); ok {
 			contactCount++
 		}
 
@@ -419,6 +461,7 @@ func (polygon *ConvexPolygon) SetRotation(radians float64) {
 	} else if polygon.rotation < -math.Pi {
 		polygon.rotation += math.Pi * 2
 	}
+	fmt.Println(polygon.rotation)
 }
 
 // Rotate is a helper function to rotate a ConvexPolygon by the radians given.
@@ -427,39 +470,46 @@ func (polygon *ConvexPolygon) Rotate(radians float64) {
 }
 
 // Scale returns the scale multipliers of the ConvexPolygon.
-func (polygon *ConvexPolygon) Scale() (float64, float64) {
-	return polygon.ScaleW, polygon.ScaleH
+func (polygon *ConvexPolygon) Scale() Vector {
+	return polygon.scale
 }
 
 // SetScale sets the scale multipliers of the ConvexPolygon.
-func (polygon *ConvexPolygon) SetScale(w, h float64) {
-	polygon.ScaleW = w
-	polygon.ScaleH = h
+func (polygon *ConvexPolygon) SetScale(x, y float64) {
+	polygon.scale.X = x
+	polygon.scale.Y = y
+}
+
+// SetScaleVec sets the scale multipliers of the ConvexPolygon using the provided Vector.
+func (polygon *ConvexPolygon) SetScaleVec(vec Vector) {
+	polygon.scale = vec
 }
 
 type ContactSet struct {
-	Points []vector.Vector // Slice of Points indicating contact between the two Shapes.
-	MTV    vector.Vector   // Minimum Translation Vector; this is the vector to move a Shape on to move it outside of its contacting Shape.
-	Center vector.Vector   // Center of the Contact set; this is the average of all Points contained within the Contact Set.
+	Points []Vector // Slice of points indicating contact between the two Shapes.
+	MTV    Vector   // Minimum Translation Vector; this is the vector to move a Shape on to move it outside of its contacting Shape.
+	Center Vector   // Center of the Contact set; this is the average of all Points contained within the Contact Set.
 }
 
 func NewContactSet() *ContactSet {
 	return &ContactSet{
-		Points: []vector.Vector{},
-		MTV:    vector.Vector{0, 0},
-		Center: vector.Vector{0, 0},
+		Points: []Vector{},
+		MTV:    Vector{},
+		Center: Vector{},
 	}
 }
 
 // LeftmostPoint returns the left-most point out of the ContactSet's Points slice. If the Points slice is empty somehow, this returns nil.
-func (cs *ContactSet) LeftmostPoint() vector.Vector {
+func (cs *ContactSet) LeftmostPoint() Vector {
 
-	var left vector.Vector
+	var left Vector
+	set := false
 
 	for _, point := range cs.Points {
 
-		if left == nil || point[0] < left[0] {
+		if !set || point.X < left.X {
 			left = point
+			set = true
 		}
 
 	}
@@ -469,14 +519,16 @@ func (cs *ContactSet) LeftmostPoint() vector.Vector {
 }
 
 // RightmostPoint returns the right-most point out of the ContactSet's Points slice. If the Points slice is empty somehow, this returns nil.
-func (cs *ContactSet) RightmostPoint() vector.Vector {
+func (cs *ContactSet) RightmostPoint() Vector {
 
-	var right vector.Vector
+	var right Vector
+	set := false
 
 	for _, point := range cs.Points {
 
-		if right == nil || point[0] > right[0] {
+		if !set || point.X > right.X {
 			right = point
+			set = true
 		}
 
 	}
@@ -486,14 +538,16 @@ func (cs *ContactSet) RightmostPoint() vector.Vector {
 }
 
 // TopmostPoint returns the top-most point out of the ContactSet's Points slice. If the Points slice is empty somehow, this returns nil.
-func (cs *ContactSet) TopmostPoint() vector.Vector {
+func (cs *ContactSet) TopmostPoint() Vector {
 
-	var top vector.Vector
+	var top Vector
+	set := false
 
 	for _, point := range cs.Points {
 
-		if top == nil || point[1] < top[1] {
+		if !set || point.Y < top.Y {
 			top = point
+			set = true
 		}
 
 	}
@@ -503,14 +557,16 @@ func (cs *ContactSet) TopmostPoint() vector.Vector {
 }
 
 // BottommostPoint returns the bottom-most point out of the ContactSet's Points slice. If the Points slice is empty somehow, this returns nil.
-func (cs *ContactSet) BottommostPoint() vector.Vector {
+func (cs *ContactSet) BottommostPoint() Vector {
 
-	var bottom vector.Vector
+	var bottom Vector
+	set := false
 
 	for _, point := range cs.Points {
 
-		if bottom == nil || point[1] > bottom[1] {
+		if !set || point.Y > bottom.Y {
 			bottom = point
+			set = true
 		}
 
 	}
@@ -519,7 +575,7 @@ func (cs *ContactSet) BottommostPoint() vector.Vector {
 
 }
 
-// Intersection tests to see if a ConvexPolygon intersects with the other given Shape. dx and dy are delta movement variables indicating
+// Intersection tests to see if a ConvexPolygon intersects with the other given Shape. dx and dy are the delta
 // movement to be applied before the intersection check (thereby allowing you to see if a Shape would collide with another if it
 // were in a different relative location). If an Intersection is found, a ContactSet will be returned, giving information regarding
 // the intersection.
@@ -527,10 +583,11 @@ func (cp *ConvexPolygon) Intersection(dx, dy float64, other IShape) *ContactSet 
 
 	contactSet := NewContactSet()
 
-	ogX := cp.X
-	ogY := cp.Y
-	cp.X += dx
-	cp.Y += dy
+	ogPosition := cp.position
+
+	// cp.position = cp.position.Add(delta)
+	cp.position.X += dx
+	cp.position.Y += dy
 
 	if circle, isCircle := other.(*Circle); isCircle {
 
@@ -544,7 +601,7 @@ func (cp *ConvexPolygon) Intersection(dx, dy float64, other IShape) *ContactSet 
 
 			for _, otherLine := range poly.Lines() {
 
-				if point := line.IntersectionPointsLine(otherLine); point != nil {
+				if point, ok := line.IntersectionPointsLine(otherLine); ok {
 					contactSet.Points = append(contactSet.Points, point)
 				}
 
@@ -560,10 +617,10 @@ func (cp *ConvexPolygon) Intersection(dx, dy float64, other IShape) *ContactSet 
 			contactSet.Center = contactSet.Center.Add(point)
 		}
 
-		contactSet.Center[0] /= float64(len(contactSet.Points))
-		contactSet.Center[1] /= float64(len(contactSet.Points))
+		contactSet.Center.X /= float64(len(contactSet.Points))
+		contactSet.Center.Y /= float64(len(contactSet.Points))
 
-		if mtv := cp.calculateMTV(contactSet, other); mtv != nil {
+		if mtv, ok := cp.calculateMTV(contactSet, other); ok {
 			contactSet.MTV = mtv
 		}
 
@@ -573,24 +630,23 @@ func (cp *ConvexPolygon) Intersection(dx, dy float64, other IShape) *ContactSet 
 
 	// If dx or dy aren't 0, then the MTV will be greater to compensate; this adjusts the vector back.
 	if contactSet != nil && (dx != 0 || dy != 0) {
-		deltaMagnitude := vector.Vector{dx, dy}.Magnitude()
 		ogMagnitude := contactSet.MTV.Magnitude()
+		deltaMagnitude := Vector{dx, dy}.Magnitude()
 		contactSet.MTV = contactSet.MTV.Unit().Scale(ogMagnitude - deltaMagnitude)
 	}
 
-	cp.X = ogX
-	cp.Y = ogY
+	cp.position = ogPosition
 
 	return contactSet
 
 }
 
 // calculateMTV returns the MTV, if possible, and a bool indicating whether it was possible or not.
-func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape) vector.Vector {
+func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape) (Vector, bool) {
 
-	delta := vector.Vector{0, 0}
+	delta := Vector{0, 0}
 
-	smallest := vector.Vector{math.MaxFloat64, 0}
+	smallest := Vector{math.MaxFloat64, 0}
 
 	switch other := otherShape.(type) {
 
@@ -603,7 +659,7 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 			overlap := pa.Overlap(pb)
 
 			if overlap <= 0 {
-				return nil
+				return Vector{}, false
 			}
 
 			if smallest.Magnitude() > overlap {
@@ -620,7 +676,7 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 			overlap := pa.Overlap(pb)
 
 			if overlap <= 0 {
-				return nil
+				return Vector{}, false
 			}
 
 			if smallest.Magnitude() > overlap {
@@ -631,21 +687,21 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 
 	case *Circle:
 
-		verts := append([]vector.Vector{}, cp.Transformed()...)
+		verts := append([]Vector{}, cp.Transformed()...)
 		// The center point of a contact could also be closer than the verts, particularly if we're testing from a Circle to another Shape.
 		verts = append(verts, contactSet.Center)
-		center := vector.Vector{other.X, other.Y}
+		center := other.position
 		sort.Slice(verts, func(i, j int) bool { return verts[i].Sub(center).Magnitude() < verts[j].Sub(center).Magnitude() })
 
-		smallest = vector.Vector{center[0] - verts[0][0], center[1] - verts[0][1]}
+		smallest = Vector{center.X - verts[0].X, center.Y - verts[0].Y}
 		smallest = smallest.Unit().Scale(smallest.Magnitude() - other.radius)
 
 	}
 
-	delta[0] = smallest[0]
-	delta[1] = smallest[1]
+	delta.X = smallest.X
+	delta.Y = smallest.Y
 
-	return delta
+	return delta, true
 }
 
 // ContainedBy returns if the ConvexPolygon is wholly contained by the other shape provided.
@@ -672,15 +728,17 @@ func (cp *ConvexPolygon) ContainedBy(otherShape IShape) bool {
 	return true
 }
 
-// FlipH flips the ConvexPolygon's vertices horizontally according to their initial offset when adding the points.
+// FlipH flips the ConvexPolygon's vertices horizontally, across the polygon's width, according to their initial offset when adding the points.
 func (cp *ConvexPolygon) FlipH() {
 
 	for _, v := range cp.Points {
-		v[0] = -v[0]
+		v.X = -v.X
 	}
-	// We have to reverse vertex order after flipping the vertices to ensure the winding order is consistent between Objects (so that the normals are consistently outside or inside, which is important
-	// when doing Intersection tests). If we assume that the normal of a line, going from vertex A to vertex B, is one direction, then the normal would be inverted if the vertices were flipped in position,
-	// but not in order. This would make Intersection tests drive objects into each other, instead of giving the delta to move away.
+	// We have to reverse vertex order after flipping the vertices to ensure the winding order is consistent between
+	// Objects (so that the normals are consistently outside or inside, which is important when doing Intersection tests).
+	// If we assume that the normal of a line, going from vertex A to vertex B, is one direction, then the normal would be
+	// inverted if the vertices were flipped in position, but not in order. This would make Intersection tests drive objects
+	// into each other, instead of giving the delta to move away.
 	cp.ReverseVertexOrder()
 
 }
@@ -689,7 +747,7 @@ func (cp *ConvexPolygon) FlipH() {
 func (cp *ConvexPolygon) FlipV() {
 
 	for _, v := range cp.Points {
-		v[1] = -v[1]
+		v.Y = -v.Y
 	}
 	cp.ReverseVertexOrder()
 
@@ -704,15 +762,16 @@ func (cp *ConvexPolygon) RecenterPoints() {
 		return
 	}
 
-	offset := vector.Vector{0, 0}
+	offset := Vector{0, 0}
 	for _, p := range cp.Points {
-		vector.In(offset).Add(p)
+		// vector.In(offset).Add(p)
+		offset = offset.Add(p)
 	}
 
-	vector.In(offset).Scale(1.0 / float64(len(cp.Points))).Invert()
+	offset = offset.Scale(1.0 / float64(len(cp.Points))).Invert()
 
 	for _, p := range cp.Points {
-		vector.In(p).Add(offset)
+		p = p.Add(offset)
 	}
 
 }
@@ -720,7 +779,7 @@ func (cp *ConvexPolygon) RecenterPoints() {
 // ReverseVertexOrder reverses the vertex ordering of the ConvexPolygon.
 func (cp *ConvexPolygon) ReverseVertexOrder() {
 
-	verts := []vector.Vector{cp.Points[0]}
+	verts := []Vector{cp.Points[0]}
 
 	for i := len(cp.Points) - 1; i >= 1; i-- {
 		verts = append(verts, cp.Points[i])
@@ -744,8 +803,8 @@ func NewRectangle(x, y, w, h float64) *ConvexPolygon {
 	)
 }
 
-// NewLine is a helper function that returns a ConvexPolygon composed of a single line. The Polygon has a position of x1, y1, and has a width and height
-// equivalent to x2-x1 and y2-y1 (so the end of the line is at x2, y2).
+// NewLine is a helper function that returns a ConvexPolygon composed of a single line. The Polygon has a position of x1, y1, and the
+// line stretches to x2-x1 and y2-y1.
 func NewLine(x1, y1, x2, y2 float64) *ConvexPolygon {
 	newLine := NewConvexPolygon(x1, y1,
 		0, 0,
@@ -756,7 +815,8 @@ func NewLine(x1, y1, x2, y2 float64) *ConvexPolygon {
 }
 
 type Circle struct {
-	X, Y, radius   float64
+	position       Vector
+	radius         float64
 	originalRadius float64
 	scale          float64
 }
@@ -764,8 +824,7 @@ type Circle struct {
 // NewCircle returns a new Circle, with its center at the X and Y position given, and with the defined radius.
 func NewCircle(x, y, radius float64) *Circle {
 	circle := &Circle{
-		X:              x,
-		Y:              y,
+		position:       NewVector(x, y),
 		radius:         radius,
 		originalRadius: radius,
 		scale:          1,
@@ -774,15 +833,15 @@ func NewCircle(x, y, radius float64) *Circle {
 }
 
 func (circle *Circle) Clone() IShape {
-	newCircle := NewCircle(circle.X, circle.Y, circle.radius)
+	newCircle := NewCircle(circle.position.X, circle.position.Y, circle.radius)
 	newCircle.originalRadius = circle.originalRadius
 	newCircle.scale = circle.scale
 	return newCircle
 }
 
 // Bounds returns the top-left and bottom-right corners of the Circle.
-func (circle *Circle) Bounds() (vector.Vector, vector.Vector) {
-	return vector.Vector{circle.X - circle.radius, circle.Y - circle.radius}, vector.Vector{circle.X + circle.radius, circle.Y + circle.radius}
+func (circle *Circle) Bounds() (Vector, Vector) {
+	return Vector{circle.position.X - circle.radius, circle.position.Y - circle.radius}, Vector{circle.position.X + circle.radius, circle.position.Y + circle.radius}
 }
 
 // Intersection tests to see if a Circle intersects with the other given Shape. dx and dy are delta movement variables indicating
@@ -793,11 +852,9 @@ func (circle *Circle) Intersection(dx, dy float64, other IShape) *ContactSet {
 
 	var contactSet *ContactSet
 
-	ox := circle.X
-	oy := circle.Y
-
-	circle.X += dx
-	circle.Y += dy
+	ogPosition := circle.position
+	circle.position.X += dx
+	circle.position.Y += dy
 
 	// here
 
@@ -808,6 +865,7 @@ func (circle *Circle) Intersection(dx, dy float64, other IShape) *ContactSet {
 		if contactSet != nil {
 			contactSet.MTV = contactSet.MTV.Scale(-1)
 		}
+
 	case *Circle:
 
 		contactSet = NewContactSet()
@@ -818,7 +876,7 @@ func (circle *Circle) Intersection(dx, dy float64, other IShape) *ContactSet {
 			return nil
 		}
 
-		contactSet.MTV = vector.Vector{circle.X - shape.X, circle.Y - shape.Y}
+		contactSet.MTV = Vector{circle.position.X - shape.position.X, circle.position.Y - shape.position.Y}
 		dist := contactSet.MTV.Magnitude()
 		contactSet.MTV = contactSet.MTV.Unit().Scale(circle.radius + shape.radius - dist)
 
@@ -826,61 +884,90 @@ func (circle *Circle) Intersection(dx, dy float64, other IShape) *ContactSet {
 			contactSet.Center = contactSet.Center.Add(point)
 		}
 
-		contactSet.Center[0] /= float64(len(contactSet.Points))
-		contactSet.Center[1] /= float64(len(contactSet.Points))
+		contactSet.Center.X /= float64(len(contactSet.Points))
+		contactSet.Center.Y /= float64(len(contactSet.Points))
 
 		// if contactSet != nil {
 		// 	contactSet.MTV[0] -= dx
 		// 	contactSet.MTV[1] -= dy
 		// }
 
-		// contactSet.MTV = vector.Vector{circle.X - shape.X, circle.Y - shape.Y}
+		// contactSet.MTV = Vector{circle.X - shape.X, circle.Y - shape.Y}
 	}
 
-	circle.X = ox
-	circle.Y = oy
+	circle.position = ogPosition
 
 	return contactSet
 }
 
-// Move translates the Circle by the designated X and Y values.
-func (circle *Circle) Move(x, y float64) {
-	circle.X += x
-	circle.Y += y
+// IntersectionForEach runs a specified function for each contact set caused by contact with any of
+// the shapes passed. If the custom function returns false, then the intersection testing stops
+// iterating through further objects.
+func (c *Circle) IntersectionForEach(dx, dy float64, f func(c *ContactSet) bool, others ...IShape) {
+
+	for _, other := range others {
+		if intersection := c.Intersection(dx, dy, other); intersection != nil {
+			if !f(intersection) {
+				return
+			}
+		}
+	}
+
 }
 
-// MoveVec translates the Circle by the designated vector.Vector.
-func (circle *Circle) MoveVec(vec vector.Vector) {
-	circle.X += vec.X()
-	circle.Y += vec.Y()
+// IntersectionForEach runs a specified function for each contact set caused by contact with any of
+// the shapes passed. If the custom function returns false, then the intersection testing stops
+// iterating through further objects.
+func (p *ConvexPolygon) IntersectionForEach(dx, dy float64, f func(c *ContactSet) bool, others ...IShape) {
+
+	for _, other := range others {
+		if intersection := p.Intersection(dx, dy, other); intersection != nil {
+			if !f(intersection) {
+				return
+			}
+		}
+	}
+
+}
+
+// Move translates the Circle by the designated X and Y values.
+func (circle *Circle) Move(x, y float64) {
+	circle.position.X += x
+	circle.position.Y += y
+}
+
+// MoveVec translates the Circle by the designated Vector.
+func (circle *Circle) MoveVec(vec Vector) {
+	circle.position.X += vec.X
+	circle.position.Y += vec.Y
 }
 
 // SetPosition sets the center position of the Circle using the X and Y values given.
 func (circle *Circle) SetPosition(x, y float64) {
-	circle.X = x
-	circle.Y = y
+	circle.position.X = x
+	circle.position.Y = y
 }
 
-// SetPosition sets the center position of the Circle using the vector.Vector given.
-func (circle *Circle) SetPositionVec(vec vector.Vector) {
-	circle.X = vec.X()
-	circle.Y = vec.Y()
+// SetPosition sets the center position of the Circle using the Vector given.
+func (circle *Circle) SetPositionVec(vec Vector) {
+	circle.position.X = vec.X
+	circle.position.Y = vec.Y
 }
 
 // Position() returns the X and Y position of the Circle.
-func (circle *Circle) Position() (float64, float64) {
-	return circle.X, circle.Y
+func (circle *Circle) Position() Vector {
+	return circle.position
 }
 
-// PointInside returns if the given vector.Vector is inside of the circle.
-func (circle *Circle) PointInside(point vector.Vector) bool {
-	return point.Sub(vector.Vector{circle.X, circle.Y}).Magnitude() <= circle.radius
+// PointInside returns if the given Vector is inside of the circle.
+func (circle *Circle) PointInside(point Vector) bool {
+	return point.DistanceSquared(circle.position) <= circle.radius*circle.radius
 }
 
 // IntersectionPointsCircle returns the intersection points of the two circles provided.
-func (circle *Circle) IntersectionPointsCircle(other *Circle) []vector.Vector {
+func (circle *Circle) IntersectionPointsCircle(other *Circle) []Vector {
 
-	d := math.Sqrt(math.Pow(other.X-circle.X, 2) + math.Pow(other.Y-circle.Y, 2))
+	d := math.Sqrt(math.Pow(other.position.X-circle.position.X, 2) + math.Pow(other.position.Y-circle.position.Y, 2))
 
 	if d > circle.radius+other.radius || d < math.Abs(circle.radius-other.radius) || d == 0 && circle.radius == other.radius {
 		return nil
@@ -889,12 +976,12 @@ func (circle *Circle) IntersectionPointsCircle(other *Circle) []vector.Vector {
 	a := (math.Pow(circle.radius, 2) - math.Pow(other.radius, 2) + math.Pow(d, 2)) / (2 * d)
 	h := math.Sqrt(math.Pow(circle.radius, 2) - math.Pow(a, 2))
 
-	x2 := circle.X + a*(other.X-circle.X)/d
-	y2 := circle.Y + a*(other.Y-circle.Y)/d
+	x2 := circle.position.X + a*(other.position.X-circle.position.X)/d
+	y2 := circle.position.Y + a*(other.position.Y-circle.position.Y)/d
 
-	return []vector.Vector{
-		{x2 + h*(other.Y-circle.Y)/d, y2 - h*(other.X-circle.X)/d},
-		{x2 - h*(other.Y-circle.Y)/d, y2 + h*(other.X-circle.X)/d},
+	return []Vector{
+		{x2 + h*(other.position.Y-circle.position.Y)/d, y2 - h*(other.position.X-circle.position.X)/d},
+		{x2 - h*(other.position.Y-circle.position.Y)/d, y2 + h*(other.position.X-circle.position.X)/d},
 	}
 
 }
@@ -911,16 +998,24 @@ func (circle *Circle) Rotation() float64 {
 }
 
 // Scale returns the scale multiplier of the Circle, twice; this is to have it adhere to the
-func (circle *Circle) Scale() (float64, float64) {
-	return circle.scale, circle.scale
+// Shape interface.
+func (circle *Circle) Scale() Vector {
+	return Vector{circle.scale, circle.scale}
 }
 
-// SetScale sets the scale multiplier of the Circle (this is W / H to have it adhere to IShape as a
-// contract; in truth, the Circle will be set to 0.5 * the maximum out of the width and height
+// SetScale sets the scale multiplier of the Circle (this is W and H to have it adhere to IShape as a
+// contract; in truth, the Circle's radius will be set to 0.5 * the maximum out of the width and height
 // height values given).
 func (circle *Circle) SetScale(w, h float64) {
 	circle.scale = math.Max(w, h)
 	circle.radius = circle.originalRadius * circle.scale
+}
+
+// SetScaleVec sets the scale multiplier of the Circle (this is W and H to have it adhere to IShape as a
+// contract; in truth, the Circle's radius will be set to 0.5 * the maximum out of the width and height
+// height values given).
+func (circle *Circle) SetScaleVec(scale Vector) {
+	circle.SetScale(scale.X, scale.Y)
 }
 
 // Radius returns the radius of the Circle.
@@ -1038,10 +1133,10 @@ func (circle *Circle) SetRadius(radius float64) {
 
 // // Bounds returns a slice of points comprising the top-left-most and bottom-right-most
 // // positions of all shapes contained within the MultiShape.
-// func (ms *MultiShape) Bounds() (vector.Vector, vector.Vector) {
+// func (ms *MultiShape) Bounds() (Vector, Vector) {
 
 // 	if len(ms.Shapes) == 0 {
-// 		return vector.Vector{}, vector.Vector{}
+// 		return Vector{}, Vector{}
 // 	}
 
 // 	topLeft, bottomRight := ms.Shapes[0].Bounds()

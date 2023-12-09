@@ -27,6 +27,7 @@ type Game struct {
 	ShowHelpText  bool
 	Screen        *ebiten.Image
 	FontFace      font.Face
+	Time          float64
 }
 
 func NewGame() *Game {
@@ -51,7 +52,13 @@ func NewGame() *Game {
 
 	fontData, _ := truetype.Parse(excelFont)
 
-	g.FontFace = truetype.NewFace(fontData, &truetype.Options{Size: 10})
+	opts := &truetype.Options{
+		Size:    10,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	}
+
+	g.FontFace = truetype.NewFace(fontData, opts)
 
 	// Debug FPS rendering
 
@@ -76,10 +83,10 @@ func (g *Game) Update() error {
 	var quit error
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
-		if ebiten.CurrentTPS() >= 60 {
-			ebiten.SetMaxTPS(6)
+		if ebiten.ActualTPS() >= 60 {
+			ebiten.SetTPS(6)
 		} else {
-			ebiten.SetMaxTPS(60)
+			ebiten.SetTPS(60)
 		}
 	}
 
@@ -120,6 +127,8 @@ func (g *Game) Update() error {
 	}
 
 	world.Update()
+
+	g.Time += 1.0 / 60.0
 
 	return quit
 

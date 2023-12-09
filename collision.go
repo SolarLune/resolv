@@ -1,9 +1,5 @@
 package resolv
 
-import (
-	"github.com/quartercastle/vector"
-)
-
 // Collision contains the results of an Object.Check() call, and represents a collision between an Object and cells that contain other Objects.
 // The Objects array indicate the Objects collided with.
 type Collision struct {
@@ -13,7 +9,7 @@ type Collision struct {
 	Cells          []*Cell   // Slice of cells that were collided with; sorted according to distance to calling Object.
 }
 
-func NewCollision() *Collision {
+func newCollision() *Collision {
 	return &Collision{
 		Objects: []*Object{},
 	}
@@ -57,55 +53,57 @@ func (cc *Collision) ObjectsByTags(tags ...string) []*Object {
 
 }
 
-// ContactWithObject returns the delta to move to come into contact with the specified Object.
-func (cc *Collision) ContactWithObject(object *Object) vector.Vector {
+// ContactWithObject returns the delta to move to have the checking object come into contact with the specified Object.
+func (cc *Collision) ContactWithObject(object *Object) Vector {
 
-	delta := vector.Vector{0, 0}
+	delta := Vector{0, 0}
 
 	if cc.dx < 0 {
-		delta[0] = object.X + object.W - cc.checkingObject.X
+		delta.X = object.Position.X + object.Size.X - cc.checkingObject.Position.X
 	} else if cc.dx > 0 {
-		delta[0] = object.X - cc.checkingObject.W - cc.checkingObject.X
+		delta.X = object.Position.X - cc.checkingObject.Size.X - cc.checkingObject.Position.X
 	}
 
 	if cc.dy < 0 {
-		delta[1] = object.Y + object.H - cc.checkingObject.Y
+		delta.Y = object.Position.Y + object.Size.Y - cc.checkingObject.Position.Y
 	} else if cc.dy > 0 {
-		delta[1] = object.Y - cc.checkingObject.H - cc.checkingObject.Y
+		delta.Y = object.Position.Y - cc.checkingObject.Size.Y - cc.checkingObject.Position.Y
 	}
 
 	return delta
 
 }
 
-// ContactWithCell returns the delta to move to come into contact with the specified Cell.
-func (cc *Collision) ContactWithCell(cell *Cell) vector.Vector {
+// ContactWithCell returns the delta to move to have the checking object come into contact with the specified Cell.
+func (cc *Collision) ContactWithCell(cell *Cell) Vector {
 
-	delta := vector.Vector{0, 0}
+	delta := Vector{0, 0}
 
 	cx := float64(cell.X * cc.checkingObject.Space.CellWidth)
 	cy := float64(cell.Y * cc.checkingObject.Space.CellHeight)
 
 	if cc.dx < 0 {
-		delta[0] = cx + float64(cc.checkingObject.Space.CellWidth) - cc.checkingObject.X
+		delta.X = cx + float64(cc.checkingObject.Space.CellWidth) - cc.checkingObject.Position.X
 	} else if cc.dx > 0 {
-		delta[0] = cx - cc.checkingObject.W - cc.checkingObject.X
+		delta.X = cx - cc.checkingObject.Size.X - cc.checkingObject.Position.X
 	}
 
 	if cc.dy < 0 {
-		delta[1] = cy + float64(cc.checkingObject.Space.CellHeight) - cc.checkingObject.Y
+		delta.Y = cy + float64(cc.checkingObject.Space.CellHeight) - cc.checkingObject.Position.Y
 	} else if cc.dy > 0 {
-		delta[1] = cy - cc.checkingObject.H - cc.checkingObject.Y
+		delta.Y = cy - cc.checkingObject.Size.Y - cc.checkingObject.Position.Y
 	}
 
 	return delta
 
 }
 
-// SlideAgainstCell returns how much distance the calling Object can slide to avoid a collision with the targetObject. This only works on vertical and horizontal axes (x and y directly),
-// primarily for platformers / top-down games. avoidTags is a sequence of tags (as strings) to indicate when sliding is valid (i.e. if a Cell contains an Object that has the tag given in
-// the avoidTags slice, then sliding CANNOT happen). If sliding is not able to be done for whatever reason, SlideAgainstCell returns nil.
-func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) vector.Vector {
+// SlideAgainstCell returns how much distance the calling Object can slide to avoid a collision with the targetObject, and
+// a boolean indicating if such a slide was possible.
+// This only works on vertical and horizontal axes (x and y directly), primarily for platformers / top-down games.
+// avoidTags is a sequence of tags (as strings) to indicate when sliding is valid (i.e. if a Cell contains an
+// Object that has the tag given in the avoidTags slice, then sliding CANNOT happen).
+func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) (Vector, bool) {
 
 	sp := cc.checkingObject.Space
 
@@ -127,34 +125,34 @@ func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) vector.Ve
 	up := sp.Cell(collidingCell.X, collidingCell.Y-1)
 	down := sp.Cell(collidingCell.X, collidingCell.Y+1)
 
-	slide := vector.Vector{0, 0}
+	slide := Vector{0, 0}
 
 	// Moving vertically
 	if cc.dy != 0 {
 
 		if diffX > 0 && (right == nil || !right.ContainsTags(avoidTags...)) {
 			// Slide right
-			slide[0] = ccX + hX - cc.checkingObject.X
+			slide.X = ccX + hX - cc.checkingObject.Position.X
 		} else if diffX < 0 && (left == nil || !left.ContainsTags(avoidTags...)) {
 			// Slide left
-			slide[0] = ccX - hX - (cc.checkingObject.X + cc.checkingObject.W)
+			slide.X = ccX - hX - (cc.checkingObject.Position.X + cc.checkingObject.Size.X)
 		} else {
-			return nil
+			return Vector{}, false
 		}
 	}
 
 	if cc.dx != 0 {
 		if diffY > 0 && (down == nil || !down.ContainsTags(avoidTags...)) {
 			// Slide down
-			slide[1] = ccY + hY - cc.checkingObject.Y
+			slide.Y = ccY + hY - cc.checkingObject.Position.Y
 		} else if diffY < 0 && (up == nil || !up.ContainsTags(avoidTags...)) {
 			// Slide up
-			slide[1] = ccY - hY - (cc.checkingObject.Y + cc.checkingObject.H)
+			slide.Y = ccY - hY - (cc.checkingObject.Position.Y + cc.checkingObject.Size.Y)
 		} else {
-			return nil
+			return Vector{}, false
 		}
 	}
 
-	return slide
+	return slide, true
 
 }

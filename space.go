@@ -2,8 +2,6 @@ package resolv
 
 import (
 	"math"
-
-	"github.com/quartercastle/vector"
 )
 
 // Space represents a collision space. Internally, each Space contains a 2D array of Cells, with each Cell being the same size. Cells contain information on which
@@ -197,11 +195,21 @@ func (sp *Space) WorldToSpace(x, y float64) (int, int) {
 	return fx, fy
 }
 
+// WorldToSpaceVec converts from a world position Vector to a position in the Space (a grid-based position).
+func (sp *Space) WorldToSpaceVec(position Vector) (int, int) {
+	return sp.WorldToSpace(position.X, position.Y)
+}
+
 // SpaceToWorld converts from a position in the Space (on a grid) to a world-based position, given the size of the Space when first created.
 func (sp *Space) SpaceToWorld(x, y int) (float64, float64) {
 	fx := float64(x * sp.CellWidth)
 	fy := float64(y * sp.CellHeight)
 	return fx, fy
+}
+
+func (sp *Space) SpaceToWorldVec(x, y int) Vector {
+	outX, outY := sp.SpaceToWorld(x, y)
+	return Vector{outX, outY}
 }
 
 // Height returns the height of the Space grid in Cells (so a 320x240 Space with 16x16 cells would have a height of 15).
@@ -225,12 +233,12 @@ func (sp *Space) CellsInLine(startX, startY, endX, endY int) []*Cell {
 
 	if cell != nil && endCell != nil {
 
-		dv := vector.Vector{float64(endX - startX), float64(endY - startY)}.Unit()
-		dv[0] *= float64(sp.CellWidth / 2)
-		dv[1] *= float64(sp.CellHeight / 2)
+		dv := Vector{float64(endX - startX), float64(endY - startY)}.Unit()
+		dv.X *= float64(sp.CellWidth / 2)
+		dv.Y *= float64(sp.CellHeight / 2)
 
 		pX, pY := sp.SpaceToWorld(startX, startY)
-		p := vector.Vector{pX + float64(sp.CellWidth/2), pY + float64(sp.CellHeight/2)}
+		p := Vector{pX + float64(sp.CellWidth/2), pY + float64(sp.CellHeight/2)}
 
 		alternate := false
 
@@ -244,12 +252,12 @@ func (sp *Space) CellsInLine(startX, startY, endX, endY int) []*Cell {
 			cells = append(cells, cell)
 
 			if alternate {
-				p[1] += dv[1]
+				p.Y += dv.Y
 			} else {
-				p[0] += dv[0]
+				p.X += dv.X
 			}
 
-			cx, cy := sp.WorldToSpace(p[0], p[1])
+			cx, cy := sp.WorldToSpace(p.X, p.Y)
 			c := sp.Cell(cx, cy)
 			if c != cell {
 				cell = c

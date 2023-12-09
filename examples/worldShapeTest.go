@@ -11,10 +11,10 @@ import (
 type WorldShapeTest struct {
 	Game *Game
 	// Space *resolv.Space
-	Contact   *resolv.ContactSet
-	Solid     *resolv.ConvexPolygon
-	CircleOne *resolv.Circle
-	CircleTwo *resolv.Circle
+	Contacts     []*resolv.ContactSet
+	Polygon      *resolv.ConvexPolygon
+	PlayerCircle *resolv.Circle
+	CircleTwo    *resolv.Circle
 }
 
 func NewWorldShapeTest(game *Game) *WorldShapeTest {
@@ -25,7 +25,7 @@ func NewWorldShapeTest(game *Game) *WorldShapeTest {
 
 func (world *WorldShapeTest) Init() {
 
-	world.Solid = resolv.NewConvexPolygon(
+	world.Polygon = resolv.NewConvexPolygon(
 		100, 100,
 		250, 80,
 		300, 150,
@@ -33,7 +33,7 @@ func (world *WorldShapeTest) Init() {
 		150, 300,
 		80, 150,
 	)
-	world.CircleOne = resolv.NewCircle(500, 200, 32)
+	world.PlayerCircle = resolv.NewCircle(500, 200, 32)
 	world.CircleTwo = resolv.NewCircle(400, 250, 32)
 
 }
@@ -59,39 +59,47 @@ func (world *WorldShapeTest) Update() {
 		dy += 1
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeySpace) && world.Contact != nil {
-		world.CircleOne.MoveVec(world.Contact.MTV)
-	}
+	world.Contacts = world.Contacts[:0]
 
-	world.Contact = world.CircleOne.Intersection(0, 0, world.Solid)
-	if world.Contact == nil {
-		world.Contact = world.CircleOne.Intersection(0, 0, world.CircleTwo)
-	}
+	world.PlayerCircle.IntersectionForEach(
+		0, 0,
+		func(c *resolv.ContactSet) bool {
 
-	world.CircleOne.Move(dx, dy)
+			if ebiten.IsKeyPressed(ebiten.KeySpace) {
+				world.PlayerCircle.MoveVec(c.MTV)
+			}
+
+			world.Contacts = append(world.Contacts, c)
+			return true
+		},
+		world.CircleTwo,
+		world.Polygon,
+	)
+
+	world.PlayerCircle.Move(dx, dy)
 }
 
 func (world *WorldShapeTest) Draw(screen *ebiten.Image) {
 
 	controllingColor := color.RGBA{0, 255, 80, 255}
-	if world.Contact != nil {
+	if len(world.Contacts) > 0 {
 		controllingColor = color.RGBA{160, 0, 0, 255}
 	}
 
-	DrawPolygon(screen, world.Solid, color.White)
+	DrawPolygon(screen, world.Polygon, color.White)
 
-	DrawCircle(screen, world.CircleOne, controllingColor)
+	DrawCircle(screen, world.PlayerCircle, controllingColor)
 	DrawCircle(screen, world.CircleTwo, color.White)
 
-	if world.Contact != nil {
+	for _, c := range world.Contacts {
 
-		for _, p := range world.Contact.Points {
-			DrawBigDot(screen, p.X(), p.Y(), color.RGBA{255, 255, 0, 255})
+		for _, p := range c.Points {
+			DrawBigDot(screen, p, color.RGBA{255, 255, 0, 255})
 		}
 
-		ebitenutil.DrawLine(screen, world.Contact.Center.X(), world.Contact.Center.Y(), world.Contact.Center.X()+world.Contact.MTV.X(), world.Contact.Center.Y()+world.Contact.MTV.Y(), color.RGBA{255, 128, 0, 255})
+		ebitenutil.DrawLine(screen, c.Center.X, c.Center.Y, c.Center.X+c.MTV.X, c.Center.Y+c.MTV.Y, color.RGBA{255, 128, 0, 255})
 
-		DrawBigDot(screen, world.Contact.Center.X(), world.Contact.Center.Y(), color.RGBA{255, 128, 255, 255})
+		DrawBigDot(screen, c.Center, color.RGBA{255, 128, 255, 255})
 
 	}
 
