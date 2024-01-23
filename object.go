@@ -172,8 +172,8 @@ func (obj *Object) SharesCellsTags(tags ...string) bool {
 }
 
 // Center returns the center position of the Object.
-func (obj *Object) Center() (float64, float64) {
-	return obj.Position.X + (obj.Size.X / 2.0), obj.Position.Y + (obj.Size.Y / 2.0)
+func (obj *Object) Center() Vector {
+	return Vector{obj.Position.X + (obj.Size.X / 2.0), obj.Position.Y + (obj.Size.Y / 2.0)}
 }
 
 // SetCenter sets the Object such that its center is at the X and Y position given.
@@ -184,7 +184,7 @@ func (obj *Object) SetCenter(x, y float64) {
 
 // CellPosition returns the cellular position of the Object's center in the Space.
 func (obj *Object) CellPosition() (int, int) {
-	return obj.Space.WorldToSpace(obj.Center())
+	return obj.Space.WorldToSpaceVec(obj.Center())
 }
 
 // SetRight sets the X position of the Object so the right edge is at the X position given.
@@ -286,14 +286,11 @@ func (obj *Object) Check(dx, dy float64, tags ...string) *Collision {
 	// ox := cc.checkingObject.X + (cc.checkingObject.W / 2)
 	// oy := cc.checkingObject.Y + (cc.checkingObject.H / 2)
 
-	ox, oy := cc.checkingObject.Center()
-	oc := Vector{ox, oy}
+	oc := cc.checkingObject.Center()
 
 	sort.Slice(cc.Objects, func(i, j int) bool {
 
-		ix, iy := cc.Objects[i].Center()
-		jx, jy := cc.Objects[j].Center()
-		return Vector{ix, iy}.Sub(oc).Magnitude() < Vector{jx, jy}.Sub(oc).Magnitude()
+		return cc.Objects[i].Center().Sub(oc).Magnitude() < cc.Objects[j].Center().Sub(oc).Magnitude()
 
 	})
 

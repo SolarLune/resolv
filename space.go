@@ -126,9 +126,12 @@ func (sp *Space) Cell(x, y int) *Cell {
 
 }
 
-// CheckCells checks a set of cells (from x,y to x + w, y + h in cellular coordinates) and return the first object within those Cells that contains any of the tags given.
-// If no tags are given, then CheckCells will return the first Object found in any Cell.
-func (sp *Space) CheckCells(x, y, w, h int, tags ...string) *Object {
+// CheckCells checks a set of cells (from x,y to x + w, y + h in cellular coordinates) and returns
+// a slice of the objects found within those Cells.
+// The objects must have any of the tags provided (if any are provided).
+func (sp *Space) CheckCells(x, y, w, h int, tags ...string) []*Object {
+
+	res := []*Object{}
 
 	for ix := x; ix < x+w; ix++ {
 
@@ -143,13 +146,13 @@ func (sp *Space) CheckCells(x, y, w, h int, tags ...string) *Object {
 					if cell.ContainsTags(tags...) {
 						for _, obj := range cell.Objects {
 							if obj.HasTags(tags...) {
-								return obj
+								res = append(res, obj)
 							}
 						}
 					}
 
 				} else if cell.Occupied() {
-					return cell.Objects[0]
+					res = append(res, cell.Objects...)
 				}
 
 			}
@@ -158,17 +161,30 @@ func (sp *Space) CheckCells(x, y, w, h int, tags ...string) *Object {
 
 	}
 
-	return nil
+	return res
 
 }
 
-// CheckCellsWorld checks the cells of the Grid with the given world coordinates.
+// CheckWorld checks the cells of the Grid with the given world coordinates.
 // Internally, this is just syntactic sugar for calling Space.WorldToSpace() on the
 // position and size given.
-func (sp *Space) CheckCellsWorld(x, y, w, h float64, tags ...string) *Object {
+func (sp *Space) CheckWorld(x, y, w, h float64, tags ...string) []*Object {
 
 	sx, sy := sp.WorldToSpace(x, y)
 	cw, ch := sp.WorldToSpace(w, h)
+
+	return sp.CheckCells(sx, sy, cw, ch, tags...)
+
+}
+
+// CheckWorldVec checks the cells of the Grid with the given world coordinates.
+// This function takes vectors for the position and size of the checked area.
+// Internally, this is just syntactic sugar for calling Space.WorldToSpace() on the
+// position and size given.
+func (sp *Space) CheckWorldVec(pos, size Vector, tags ...string) []*Object {
+
+	sx, sy := sp.WorldToSpace(pos.X, pos.Y)
+	cw, ch := sp.WorldToSpace(size.X, size.Y)
 
 	return sp.CheckCells(sx, sy, cw, ch, tags...)
 

@@ -115,10 +115,10 @@ func (cc *Collision) SlideAgainstCell(cell *Cell, avoidTags ...string) (Vector, 
 	ccX += hX
 	ccY += hY
 
-	oX, oY := cc.checkingObject.Center()
+	center := cc.checkingObject.Center()
 
-	diffX := oX - ccX
-	diffY := oY - ccY
+	diffX := center.X - ccX
+	diffY := center.Y - ccY
 
 	left := sp.Cell(collidingCell.X-1, collidingCell.Y)
 	right := sp.Cell(collidingCell.X+1, collidingCell.Y)

@@ -1,7 +1,6 @@
 package resolv
 
 import (
-	"fmt"
 	"math"
 	"sort"
 )
@@ -378,7 +377,7 @@ func (cp *ConvexPolygon) Center() Vector {
 	pos := Vector{0, 0}
 
 	for _, v := range cp.Transformed() {
-		pos.Add(v)
+		pos = pos.Add(v)
 	}
 
 	pos.X /= float64(len(cp.Transformed()))
@@ -441,18 +440,6 @@ func (polygon *ConvexPolygon) Rotation() float64 {
 }
 
 // SetRotation sets the rotation for the ConvexPolygon; note that the rotation goes counter-clockwise from 0 to pi, and then from -pi at 180 down, back to 0.
-// This can be visualized as follows:
-//
-//	 	        (Pi / 2)
-//						|
-//						|
-//
-// (Pi / -Pi) ------------- (0)
-//
-//		|
-//		|
-//	(-Pi / 2)
-//
 // This rotation scheme follows the way math.Atan2() works.
 func (polygon *ConvexPolygon) SetRotation(radians float64) {
 	polygon.rotation = radians
@@ -461,7 +448,6 @@ func (polygon *ConvexPolygon) SetRotation(radians float64) {
 	} else if polygon.rotation < -math.Pi {
 		polygon.rotation += math.Pi * 2
 	}
-	fmt.Println(polygon.rotation)
 }
 
 // Rotate is a helper function to rotate a ConvexPolygon by the radians given.
