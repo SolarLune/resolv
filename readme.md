@@ -1,6 +1,6 @@
 ![](https://i.imgur.com/BDQ2wWJ.gif)
 
-# Resolv v0.6.0
+# Resolv v0.7.0
 
 [pkg.go.dev](https://pkg.go.dev/github.com/solarlune/resolv)
 
