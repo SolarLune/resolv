@@ -182,6 +182,12 @@ func (obj *Object) SetCenter(x, y float64) {
 	obj.Position.Y = y - (obj.Size.Y / 2)
 }
 
+// SetCenterVec sets the Object such that its center is at the X and Y position given.
+func (obj *Object) SetCenterVec(pos Vector) {
+	obj.Position.X = pos.X - (obj.Size.X / 2)
+	obj.Position.Y = pos.Y - (obj.Size.Y / 2)
+}
+
 // CellPosition returns the cellular position of the Object's center in the Space.
 func (obj *Object) CellPosition() (int, int) {
 	return obj.Space.WorldToSpaceVec(obj.Center())
