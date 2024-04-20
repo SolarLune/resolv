@@ -19,6 +19,7 @@ type IShape interface {
 	Bounds() (Vector, Vector)
 	// Position returns the X and Y position of the Shape.
 	Position() Vector
+	transformedCenter() Vector // specifically for convex shapes
 	// SetPosition allows you to place a Shape at another location.
 	SetPosition(x, y float64)
 	// SetPositionVec allows you to place a Shape at another location using a Vector.
@@ -387,6 +388,10 @@ func (cp *ConvexPolygon) Center() Vector {
 
 }
 
+func (cp *ConvexPolygon) transformedCenter() Vector {
+	return cp.Center()
+}
+
 // Project projects (i.e. flattens) the ConvexPolygon onto the provided axis.
 func (cp *ConvexPolygon) Project(axis Vector) Projection {
 	axis = axis.Unit()
@@ -475,6 +480,7 @@ type ContactSet struct {
 	Points []Vector // Slice of points indicating contact between the two Shapes.
 	MTV    Vector   // Minimum Translation Vector; this is the vector to move a Shape on to move it outside of its contacting Shape.
 	Center Vector   // Center of the Contact set; this is the average of all Points contained within the Contact Set.
+	Normal Vector
 }
 
 func NewContactSet() *ContactSet {
@@ -673,19 +679,36 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 
 	case *Circle:
 
-		verts := append([]Vector{}, cp.Transformed()...)
-		// The center point of a contact could also be closer than the verts, particularly if we're testing from a Circle to another Shape.
+		verts := append(cp.Transformed(), contactSet.Points...)
 		verts = append(verts, contactSet.Center)
-		center := other.position
-		sort.Slice(verts, func(i, j int) bool { return verts[i].Sub(center).Magnitude() < verts[j].Sub(center).Magnitude() })
 
-		smallest = Vector{center.X - verts[0].X, center.Y - verts[0].Y}
-		smallest = smallest.Unit().Scale(smallest.Magnitude() - other.radius)
+		intendedEndPosition := other.position.Add(contactSet.Center.Sub(other.position).Unit().Scale(other.radius))
+
+		// intendedEndPosition := delta
+
+		sort.Slice(verts, func(i, j int) bool {
+			return verts[i].DistanceSquared(intendedEndPosition) < verts[j].DistanceSquared(intendedEndPosition)
+		})
+
+		smallest = verts[0].Sub(other.position)
+
+		// // The center point of a contact could also be closer than the verts, particularly if we're testing from a Circle to another Shape.
+		// verts = append(verts, contactSet.Center)
+		// center := other.transformedCenter()
+		// sort.Slice(verts, func(i, j int) bool { return verts[i].Sub(center).Magnitude() < verts[j].Sub(center).Magnitude() })
+
+		// smallest = Vector{center.X - verts[0].X, center.Y - verts[0].Y}
+		// smallest = smallest.Unit().Scale(smallest.Magnitude() - other.radius)
 
 	}
 
 	delta.X = smallest.X
 	delta.Y = smallest.Y
+
+	pointingDirection := otherShape.transformedCenter().Sub(cp.transformedCenter())
+	if pointingDirection.Dot(delta) > 0 {
+		delta = delta.Invert()
+	}
 
 	return delta, true
 }
@@ -943,6 +966,10 @@ func (circle *Circle) SetPositionVec(vec Vector) {
 // Position() returns the X and Y position of the Circle.
 func (circle *Circle) Position() Vector {
 	return circle.position
+}
+
+func (circle *Circle) transformedCenter() Vector {
+	return circle.Position()
 }
 
 // PointInside returns if the given Vector is inside of the circle.
