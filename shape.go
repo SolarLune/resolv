@@ -671,6 +671,11 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 
 		}
 
+		// If the direction from target to source points opposite to the separation, invert the separation vector.
+		if cp.Center().Sub(other.Center()).Dot(smallest) < 0 {
+			smallest = smallest.Invert()
+		}
+
 	case *Circle:
 
 		verts := append([]Vector{}, cp.Transformed()...)
