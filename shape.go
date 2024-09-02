@@ -1193,7 +1193,7 @@ func (projection Projection) Overlapping(other Projection) bool {
 
 // Overlap returns the amount that a Projection is overlapping with the other, provided Projection. Credit to https://dyn4j.org/2010/01/sat/#sat-nointer
 func (projection Projection) Overlap(other Projection) float64 {
-	return math.Min(projection.Max, other.Max) - math.Max(projection.Min, other.Min)
+	return math.Min(projection.Max - other.Min, other.Max - projection.Min)
 }
 
 // IsInside returns whether the Projection is wholly inside of the other, provided Projection.
