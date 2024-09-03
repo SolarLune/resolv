@@ -679,13 +679,38 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 	case *Circle:
 
 		verts := append([]Vector{}, cp.Transformed()...)
-		// The center point of a contact could also be closer than the verts, particularly if we're testing from a Circle to another Shape.
-		verts = append(verts, contactSet.Center)
 		center := other.position
 		sort.Slice(verts, func(i, j int) bool { return verts[i].Sub(center).Magnitude() < verts[j].Sub(center).Magnitude() })
 
-		smallest = Vector{center.X - verts[0].X, center.Y - verts[0].Y}
-		smallest = smallest.Unit().Scale(smallest.Magnitude() - other.radius)
+		axis := Vector{center.X - verts[0].X, center.Y - verts[0].Y}
+		pa := cp.Project(axis)
+		pb := other.Project(axis)
+		overlap := pa.Overlap(pb)
+		if overlap <= 0 {
+			return Vector{}, false
+		}
+		smallest = axis.Unit().Scale(overlap)
+
+		for _, axis := range cp.SATAxes() {
+			pa := cp.Project(axis)
+			pb := other.Project(axis)
+
+			overlap := pa.Overlap(pb)
+
+			if overlap <= 0 {
+				return Vector{}, false
+			}
+
+			if smallest.Magnitude() > overlap {
+				smallest = axis.Scale(overlap)
+			}
+
+		}
+
+		// If the direction from target to source points opposite to the separation, invert the separation vector
+		if cp.Center().Sub(other.position).Dot(smallest) < 0 {
+			smallest = smallest.Invert()
+		}
 
 	}
 
@@ -833,6 +858,21 @@ func (circle *Circle) Clone() IShape {
 // Bounds returns the top-left and bottom-right corners of the Circle.
 func (circle *Circle) Bounds() (Vector, Vector) {
 	return Vector{circle.position.X - circle.radius, circle.position.Y - circle.radius}, Vector{circle.position.X + circle.radius, circle.position.Y + circle.radius}
+}
+
+func (circle *Circle) Project(axis Vector) Projection {
+	axis = axis.Unit()
+	projectedCenter := axis.Dot(circle.position)
+	projectedRadius := axis.Magnitude() * circle.radius * circle.scale
+
+	min := projectedCenter - projectedRadius
+	max := projectedCenter + projectedRadius
+
+	if min > max {
+		min, max = max, min
+	}
+
+	return Projection{min, max}
 }
 
 // Intersection tests to see if a Circle intersects with the other given Shape. dx and dy are delta movement variables indicating
