@@ -26,7 +26,7 @@ type Player struct {
 func NewPlayer(space *resolv.Space) *Player {
 
 	p := &Player{
-		Object:      resolv.NewObject(32, 128, 16, 24),
+		Object:      resolv.NewObject(32, 128, 16, 24, "player"),
 		FacingRight: true,
 	}
 	p.Object.SetShape(resolv.NewRectangle(0, 0, p.Object.Size.X, p.Object.Size.Y))
@@ -402,21 +402,21 @@ func (world *WorldPlatformer) Update() {
 
 func (world *WorldPlatformer) Draw(screen *ebiten.Image) {
 
-	for _, o := range world.Space.Objects() {
+	world.Space.ForEachObject(func(object *resolv.Object, index, maxCount int) {
 
-		if o.HasTags("platform") && o != world.FloatingPlatform {
+		if object.HasTags("platform") && object != world.FloatingPlatform {
 			drawColor := color.RGBA{180, 100, 0, 255}
-			vector.DrawFilledRect(screen, float32(o.Position.X), float32(o.Position.Y), float32(o.Size.X), float32(o.Size.Y), drawColor, false)
-		} else if o.HasTags("ramp") {
+			vector.DrawFilledRect(screen, float32(object.Position.X), float32(object.Position.Y), float32(object.Size.X), float32(object.Size.Y), drawColor, false)
+		} else if object.HasTags("ramp") {
 			drawColor := color.RGBA{255, 50, 100, 255}
-			tri := o.Shape.(*resolv.ConvexPolygon)
+			tri := object.Shape.(*resolv.ConvexPolygon)
 			world.DrawPolygon(screen, tri, drawColor)
 		} else {
 			drawColor := color.RGBA{60, 60, 60, 255}
-			vector.DrawFilledRect(screen, float32(o.Position.X), float32(o.Position.Y), float32(o.Size.X), float32(o.Size.Y), drawColor, false)
+			vector.DrawFilledRect(screen, float32(object.Position.X), float32(object.Position.Y), float32(object.Size.X), float32(object.Size.Y), drawColor, false)
 		}
 
-	}
+	})
 
 	// We draw the floating platform separately because Space.Objects() returns Objects in order of which cells they are in, which means
 	// that the platform would draw under the solid blocks if it's below it. This way, it always draws on top.

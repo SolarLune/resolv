@@ -72,16 +72,31 @@ func (sp *Space) Remove(objects ...*Object) {
 
 }
 
+func (sp *Space) removeFromCells(objects ...*Object) {
+
+	for _, obj := range objects {
+
+		for _, cell := range obj.TouchingCells {
+			cell.unregister(obj)
+		}
+
+		obj.TouchingCells = []*Cell{}
+
+	}
+
+}
+
 // Objects returns a new slice of the objects in the Space.
 func (s *Space) Objects() []*Object {
 	return append(make([]*Object, 0, len(s.objects)), s.objects...)
 }
 
-// ForEachObject iterates through each Object in the Space and runs the provided function on them.
-func (s *Space) ForEachObject(forEach func(o *Object)) {
+// ForEachObject iterates through each Object in the Space and runs the provided function on them, passing the object, its index in the
+// objects slice, and the maximum number of objects in the space.
+func (s *Space) ForEachObject(forEach func(object *Object, index, maxCount int)) {
 
-	for _, o := range s.objects {
-		forEach(o)
+	for i, o := range s.objects {
+		forEach(o, i, len(s.objects))
 	}
 
 }

@@ -56,11 +56,7 @@ func (obj *Object) Update() {
 		// the Object (which is essentially removing it from its previous Cells / position and re-adding it to the new Cells /
 		// position), we store the original Space to re-set it.
 
-		space := obj.Space
-
-		obj.Space.Remove(obj)
-
-		obj.Space = space
+		obj.Space.removeFromCells(obj)
 
 		cx, cy, ex, ey := obj.BoundsToSpace(0, 0)
 

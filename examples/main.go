@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/solarlune/resolv"
 	"golang.org/x/image/font"
 )
@@ -160,10 +161,10 @@ func (g *Game) DebugDraw(screen *ebiten.Image, space *resolv.Space) {
 
 			cell := space.Cell(x, y)
 
-			cw := float64(space.CellWidth)
-			ch := float64(space.CellHeight)
-			cx := float64(cell.X) * cw
-			cy := float64(cell.Y) * ch
+			cw := float32(space.CellWidth)
+			ch := float32(space.CellHeight)
+			cx := float32(cell.X) * cw
+			cy := float32(cell.Y) * ch
 
 			drawColor := color.RGBA{20, 20, 20, 255}
 
@@ -171,13 +172,13 @@ func (g *Game) DebugDraw(screen *ebiten.Image, space *resolv.Space) {
 				drawColor = color.RGBA{255, 255, 0, 255}
 			}
 
-			ebitenutil.DrawLine(screen, cx, cy, cx+cw, cy, drawColor)
+			vector.StrokeRect(screen, cx, cy, cx+cw, cy, 2, drawColor, false)
 
-			ebitenutil.DrawLine(screen, cx+cw, cy, cx+cw, cy+ch, drawColor)
+			vector.StrokeRect(screen, cx+cw, cy, cx+cw, cy+ch, 2, drawColor, false)
 
-			ebitenutil.DrawLine(screen, cx+cw, cy+ch, cx, cy+ch, drawColor)
+			vector.StrokeRect(screen, cx+cw, cy+ch, cx, cy+ch, 2, drawColor, false)
 
-			ebitenutil.DrawLine(screen, cx, cy+ch, cx, cy, drawColor)
+			vector.StrokeRect(screen, cx, cy+ch, cx, cy, 2, drawColor, false)
 		}
 
 	}
