@@ -19,6 +19,7 @@ type IShape interface {
 	Bounds() (Vector, Vector)
 	// Position returns the X and Y position of the Shape.
 	Position() Vector
+	transformedCenter() Vector // specifically for convex shapes
 	// SetPosition allows you to place a Shape at another location.
 	SetPosition(x, y float64)
 	// SetPositionVec allows you to place a Shape at another location using a Vector.
@@ -387,6 +388,10 @@ func (cp *ConvexPolygon) Center() Vector {
 
 }
 
+func (cp *ConvexPolygon) transformedCenter() Vector {
+	return cp.Center()
+}
+
 // Project projects (i.e. flattens) the ConvexPolygon onto the provided axis.
 func (cp *ConvexPolygon) Project(axis Vector) Projection {
 	axis = axis.Unit()
@@ -475,6 +480,7 @@ type ContactSet struct {
 	Points []Vector // Slice of points indicating contact between the two Shapes.
 	MTV    Vector   // Minimum Translation Vector; this is the vector to move a Shape on to move it outside of its contacting Shape.
 	Center Vector   // Center of the Contact set; this is the average of all Points contained within the Contact Set.
+	Normal Vector
 }
 
 func NewContactSet() *ContactSet {
@@ -671,21 +677,56 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 
 		}
 
+		// If the direction from target to source points opposite to the separation, invert the separation vector.
+		if cp.Center().Sub(other.Center()).Dot(smallest) < 0 {
+			smallest = smallest.Invert()
+		}
+
 	case *Circle:
 
 		verts := append([]Vector{}, cp.Transformed()...)
-		// The center point of a contact could also be closer than the verts, particularly if we're testing from a Circle to another Shape.
-		verts = append(verts, contactSet.Center)
 		center := other.position
 		sort.Slice(verts, func(i, j int) bool { return verts[i].Sub(center).Magnitude() < verts[j].Sub(center).Magnitude() })
 
-		smallest = Vector{center.X - verts[0].X, center.Y - verts[0].Y}
-		smallest = smallest.Unit().Scale(smallest.Magnitude() - other.radius)
+		axis := Vector{center.X - verts[0].X, center.Y - verts[0].Y}
+		pa := cp.Project(axis)
+		pb := other.Project(axis)
+		overlap := pa.Overlap(pb)
+		if overlap <= 0 {
+			return Vector{}, false
+		}
+		smallest = axis.Unit().Scale(overlap)
+
+		for _, axis := range cp.SATAxes() {
+			pa := cp.Project(axis)
+			pb := other.Project(axis)
+
+			overlap := pa.Overlap(pb)
+
+			if overlap <= 0 {
+				return Vector{}, false
+			}
+
+			if smallest.Magnitude() > overlap {
+				smallest = axis.Scale(overlap)
+			}
+
+		}
+
+		// If the direction from target to source points opposite to the separation, invert the separation vector
+		if cp.Center().Sub(other.position).Dot(smallest) < 0 {
+			smallest = smallest.Invert()
+		}
 
 	}
 
 	delta.X = smallest.X
 	delta.Y = smallest.Y
+
+	pointingDirection := otherShape.transformedCenter().Sub(cp.transformedCenter())
+	if pointingDirection.Dot(delta) > 0 {
+		delta = delta.Invert()
+	}
 
 	return delta, true
 }
@@ -830,6 +871,21 @@ func (circle *Circle) Bounds() (Vector, Vector) {
 	return Vector{circle.position.X - circle.radius, circle.position.Y - circle.radius}, Vector{circle.position.X + circle.radius, circle.position.Y + circle.radius}
 }
 
+func (circle *Circle) Project(axis Vector) Projection {
+	axis = axis.Unit()
+	projectedCenter := axis.Dot(circle.position)
+	projectedRadius := axis.Magnitude() * circle.radius * circle.scale
+
+	min := projectedCenter - projectedRadius
+	max := projectedCenter + projectedRadius
+
+	if min > max {
+		min, max = max, min
+	}
+
+	return Projection{min, max}
+}
+
 // Intersection tests to see if a Circle intersects with the other given Shape. dx and dy are delta movement variables indicating
 // movement to be applied before the intersection check (thereby allowing you to see if a Shape would collide with another if it
 // were in a different relative location). If an Intersection is found, a ContactSet will be returned, giving information regarding
@@ -943,6 +999,10 @@ func (circle *Circle) SetPositionVec(vec Vector) {
 // Position() returns the X and Y position of the Circle.
 func (circle *Circle) Position() Vector {
 	return circle.position
+}
+
+func (circle *Circle) transformedCenter() Vector {
+	return circle.Position()
 }
 
 // PointInside returns if the given Vector is inside of the circle.
@@ -1188,7 +1248,7 @@ func (projection Projection) Overlapping(other Projection) bool {
 
 // Overlap returns the amount that a Projection is overlapping with the other, provided Projection. Credit to https://dyn4j.org/2010/01/sat/#sat-nointer
 func (projection Projection) Overlap(other Projection) float64 {
-	return math.Min(projection.Max, other.Max) - math.Max(projection.Min, other.Min)
+	return math.Min(projection.Max - other.Min, other.Max - projection.Min)
 }
 
 // IsInside returns whether the Projection is wholly inside of the other, provided Projection.
