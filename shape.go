@@ -19,6 +19,7 @@ type IShape interface {
 	Bounds() (Vector, Vector)
 	// Position returns the X and Y position of the Shape.
 	Position() Vector
+	transformedCenter() Vector // specifically for convex shapes
 	// SetPosition allows you to place a Shape at another location.
 	SetPosition(x, y float64)
 	// SetPositionVec allows you to place a Shape at another location using a Vector.
@@ -387,6 +388,10 @@ func (cp *ConvexPolygon) Center() Vector {
 
 }
 
+func (cp *ConvexPolygon) transformedCenter() Vector {
+	return cp.Center()
+}
+
 // Project projects (i.e. flattens) the ConvexPolygon onto the provided axis.
 func (cp *ConvexPolygon) Project(axis Vector) Projection {
 	axis = axis.Unit()
@@ -475,6 +480,7 @@ type ContactSet struct {
 	Points []Vector // Slice of points indicating contact between the two Shapes.
 	MTV    Vector   // Minimum Translation Vector; this is the vector to move a Shape on to move it outside of its contacting Shape.
 	Center Vector   // Center of the Contact set; this is the average of all Points contained within the Contact Set.
+	Normal Vector
 }
 
 func NewContactSet() *ContactSet {
@@ -716,6 +722,11 @@ func (cp *ConvexPolygon) calculateMTV(contactSet *ContactSet, otherShape IShape)
 
 	delta.X = smallest.X
 	delta.Y = smallest.Y
+
+	pointingDirection := otherShape.transformedCenter().Sub(cp.transformedCenter())
+	if pointingDirection.Dot(delta) > 0 {
+		delta = delta.Invert()
+	}
 
 	return delta, true
 }
@@ -988,6 +999,10 @@ func (circle *Circle) SetPositionVec(vec Vector) {
 // Position() returns the X and Y position of the Circle.
 func (circle *Circle) Position() Vector {
 	return circle.position
+}
+
+func (circle *Circle) transformedCenter() Vector {
+	return circle.Position()
 }
 
 // PointInside returns if the given Vector is inside of the circle.

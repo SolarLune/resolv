@@ -8,6 +8,7 @@ import (
 // Objects occupy those spaces.
 type Space struct {
 	Cells                 [][]*Cell
+	objects               []*Object
 	CellWidth, CellHeight int // Width and Height of each Cell in "world-space" / pixels / whatever
 }
 
@@ -33,28 +34,21 @@ func NewSpace(spaceWidth, spaceHeight, cellWidth, cellHeight int) *Space {
 // Add adds the specified Objects to the Space, updating the Space's cells to refer to the Object.
 func (sp *Space) Add(objects ...*Object) {
 
-	if sp == nil {
-		panic("ERROR: space is nil")
-	}
-
 	for _, obj := range objects {
 
 		obj.Space = sp
-
 		// We call Update() once to make sure the object gets its cells added.
 		obj.Update()
 
 	}
+
+	sp.objects = append(sp.objects, objects...)
 
 }
 
 // Remove removes the specified Objects from being associated with the Space. This should be done whenever an Object is removed from the
 // game.
 func (sp *Space) Remove(objects ...*Object) {
-
-	if sp == nil {
-		panic("ERROR: space is nil")
-	}
 
 	for _, obj := range objects {
 
@@ -66,35 +60,29 @@ func (sp *Space) Remove(objects ...*Object) {
 
 		obj.Space = nil
 
-	}
-
-}
-
-// Objects loops through all Cells in the Space (from top to bottom, and from left to right) to return all Objects
-// that exist in the Space. Of course, each Object is counted only once.
-func (sp *Space) Objects() []*Object {
-
-	objectsAdded := map[*Object]bool{}
-	objects := []*Object{}
-
-	for cy := range sp.Cells {
-
-		for cx := range sp.Cells[cy] {
-
-			for _, o := range sp.Cells[cy][cx].Objects {
-
-				if _, added := objectsAdded[o]; !added {
-					objects = append(objects, o)
-					objectsAdded[o] = true
-				}
-
+		for i, o := range sp.objects {
+			if o == obj {
+				sp.objects[i] = nil
+				sp.objects = append(sp.objects[:i], sp.objects[i+1:]...)
+				break
 			}
-
 		}
 
 	}
 
-	return objects
+}
+
+// Objects returns a new slice of the objects in the Space.
+func (s *Space) Objects() []*Object {
+	return append(make([]*Object, 0, len(s.objects)), s.objects...)
+}
+
+// ForEachObject iterates through each Object in the Space and runs the provided function on them.
+func (s *Space) ForEachObject(forEach func(o *Object)) {
+
+	for _, o := range s.objects {
+		forEach(o)
+	}
 
 }
 
