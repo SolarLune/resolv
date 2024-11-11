@@ -2,80 +2,53 @@ package main
 
 import (
 	"image/color"
-	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/solarlune/resolv"
 )
 
-var circleBuffer map[resolv.IShape]*ebiten.Image = map[resolv.IShape]*ebiten.Image{}
-var bigDotImg *ebiten.Image
-
-func DrawPolygon(screen *ebiten.Image, shape *resolv.ConvexPolygon, color color.Color) {
-
-	verts := shape.Transformed()
-	for i := 0; i < len(verts); i++ {
-		vert := verts[i]
-		next := verts[0]
-
-		if i < len(verts)-1 {
-			next = verts[i+1]
-		}
-		ebitenutil.DrawLine(screen, vert.X, vert.Y, next.X, next.Y, color)
-
-	}
-
+type WorldInterface interface {
+	Init()
+	Update()
+	Draw(img *ebiten.Image)
+	Space() *resolv.Space
 }
 
-func DrawCircle(screen *ebiten.Image, circle *resolv.Circle, drawColor color.Color) {
+func CommonDraw(screen *ebiten.Image, world WorldInterface) {
 
-	// Actually drawing the circles live is too inefficient, so we will simply draw them to an image and then draw that instead
-	// when necessary.
+	world.Space().ForEachShape(func(shape resolv.IShape, index, maxCount int) bool {
 
-	if _, exists := circleBuffer[circle]; !exists {
-		newImg := ebiten.NewImage(int(circle.Radius())*2, int(circle.Radius())*2)
+		var drawColor color.Color = color.White
 
-		newImg.Set(int(circle.Position().X), int(circle.Position().Y), color.White)
+		tags := shape.Tags()
 
-		stepCount := float64(32)
-
-		// Half image width and height.
-		hw := circle.Radius()
-		hh := circle.Radius()
-
-		for i := 0; i < int(stepCount); i++ {
-
-			x := (math.Sin(math.Pi*2*float64(i)/stepCount) * (circle.Radius() - 2)) + hw
-			y := (math.Cos(math.Pi*2*float64(i)/stepCount) * (circle.Radius() - 2)) + hh
-
-			x2 := (math.Sin(math.Pi*2*float64(i+1)/stepCount) * (circle.Radius() - 2)) + hw
-			y2 := (math.Cos(math.Pi*2*float64(i+1)/stepCount) * (circle.Radius() - 2)) + hh
-
-			ebitenutil.DrawLine(newImg, x, y, x2, y2, color.White)
-
+		if tags.Has(TagPlatform) && !tags.Has(TagSolidWall) {
+			drawColor = color.RGBA{255, 128, 35, 255}
 		}
-		circleBuffer[circle] = newImg
-	}
+		if tags.Has(TagPlayer) {
+			drawColor = color.RGBA{32, 255, 128, 255}
+		}
+		if tags.Has(TagBouncer) {
+			r := uint8(32)
+			g := uint8(128)
+			bouncer := shape.Data().(*Bouncer)
+			r += uint8((255 - float64(r)) * bouncer.ColorChange)
+			g += uint8((255 - float64(g)) * bouncer.ColorChange)
+			drawColor = color.RGBA{r, g, 255, 255}
+		}
+		switch o := shape.(type) {
+		case *resolv.Circle:
+			vector.StrokeCircle(screen, float32(o.Position().X), float32(o.Position().Y), float32(o.Radius()), 2, drawColor, false)
+		case *resolv.ConvexPolygon:
 
-	drawOpt := &ebiten.DrawImageOptions{}
-	r, g, b, _ := drawColor.RGBA()
-	drawOpt.ColorM.Scale(float64(r)/65535, float64(g)/65535, float64(b)/65535, 1)
-	drawOpt.GeoM.Translate(circle.Position().X-circle.Radius(), circle.Position().Y-circle.Radius())
-	screen.DrawImage(circleBuffer[circle], drawOpt)
+			for _, l := range o.Lines() {
+				vector.StrokeLine(screen, float32(l.Start.X), float32(l.Start.Y), float32(l.End.X), float32(l.End.Y), 2, drawColor, false)
+			}
+		}
 
-}
+		return true
 
-func DrawBigDot(screen *ebiten.Image, position resolv.Vector, drawColor color.Color) {
-
-	if bigDotImg == nil {
-		bigDotImg = ebiten.NewImage(4, 4)
-		bigDotImg.Fill(color.White)
-	}
-
-	opt := &ebiten.DrawImageOptions{}
-	opt.GeoM.Translate(position.X-2, position.Y-2)
-	opt.ColorM.ScaleWithColor(drawColor)
-	screen.DrawImage(bigDotImg, opt)
+	})
 
 }
