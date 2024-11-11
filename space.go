@@ -1,28 +1,26 @@
 package resolv
 
-import (
-	"math"
-)
+import "math"
 
 // Space represents a collision space. Internally, each Space contains a 2D array of Cells, with each Cell being the same size. Cells contain information on which
-// Objects occupy those spaces.
+// Shapes occupy those spaces and are used to speed up intersection testing across multiple Shapes that could be in dynamic locations.
 type Space struct {
-	Cells                 [][]*Cell
-	objects               []*Object
-	CellWidth, CellHeight int // Width and Height of each Cell in "world-space" / pixels / whatever
+	cells                 [][]*Cell // The cells present in the Space
+	shapes                ShapeCollection
+	cellWidth, cellHeight int // Width and Height of each Cell in "world-space" / pixels / whatever
 }
 
 // NewSpace creates a new Space. spaceWidth and spaceHeight is the width and height of the Space (usually in pixels), which is then populated with cells of size
-// cellWidth by cellHeight. Generally, you want cells to be the size of the smallest collide-able objects in your game, and you want to move Objects at a maximum
-// speed of one cell size per collision check to avoid missing any possible collisions.
+// cellWidth by cellHeight. Generally, you want cells to be the size of a "normal object".
+// You want to move Objects at a maximum speed of one cell size per collision check to avoid missing any possible collisions.
 func NewSpace(spaceWidth, spaceHeight, cellWidth, cellHeight int) *Space {
 
 	sp := &Space{
-		CellWidth:  cellWidth,
-		CellHeight: cellHeight,
+		cellWidth:  cellWidth,
+		cellHeight: cellHeight,
 	}
 
-	sp.Resize(spaceWidth/cellWidth, spaceHeight/cellHeight)
+	sp.Resize(int(math.Ceil(float64(spaceWidth)/float64(cellWidth))), int(math.Ceil(float64(spaceHeight)/float64(cellHeight))))
 
 	// sp.Resize(int(math.Ceil(float64(spaceWidth)/float64(cellWidth))),
 	// 	int(math.Ceil(float64(spaceHeight)/float64(cellHeight))))
@@ -32,38 +30,33 @@ func NewSpace(spaceWidth, spaceHeight, cellWidth, cellHeight int) *Space {
 }
 
 // Add adds the specified Objects to the Space, updating the Space's cells to refer to the Object.
-func (sp *Space) Add(objects ...*Object) {
+func (s *Space) Add(shapes ...IShape) {
 
-	for _, obj := range objects {
+	for _, shape := range shapes {
 
-		obj.Space = sp
+		shape.setSpace(s)
+
 		// We call Update() once to make sure the object gets its cells added.
-		obj.Update()
+		shape.update()
 
 	}
 
-	sp.objects = append(sp.objects, objects...)
+	s.shapes = append(s.shapes, shapes...)
 
 }
 
-// Remove removes the specified Objects from being associated with the Space. This should be done whenever an Object is removed from the
-// game.
-func (sp *Space) Remove(objects ...*Object) {
+// Remove removes the specified Shapes from the Space.
+// This should be done whenever a game object (and its Shape) is removed from the game.
+func (s *Space) Remove(shapes ...IShape) {
 
-	for _, obj := range objects {
+	for _, shape := range shapes {
 
-		for _, cell := range obj.TouchingCells {
-			cell.unregister(obj)
-		}
+		shape.removeFromTouchingCells()
 
-		obj.TouchingCells = []*Cell{}
-
-		obj.Space = nil
-
-		for i, o := range sp.objects {
-			if o == obj {
-				sp.objects[i] = nil
-				sp.objects = append(sp.objects[:i], sp.objects[i+1:]...)
+		for i, o := range s.shapes {
+			if o == shape {
+				s.shapes[i] = nil
+				s.shapes = append(s.shapes[:i], s.shapes[i+1:]...)
 				break
 			}
 		}
@@ -72,221 +65,176 @@ func (sp *Space) Remove(objects ...*Object) {
 
 }
 
-func (sp *Space) removeFromCells(objects ...*Object) {
+// RemoveAll removes all Shapes from the Space (and from its internal Cells).
+func (s *Space) RemoveAll() {
 
-	for _, obj := range objects {
+	for i := range s.shapes {
+		s.shapes[i] = nil
+	}
 
-		for _, cell := range obj.TouchingCells {
-			cell.unregister(obj)
+	s.shapes = s.shapes[:0]
+	for y := range s.cells {
+		for x := range s.cells[y] {
+			for i := range s.cells[y][x].Shapes {
+				s.cells[y][x].Shapes[i] = nil
+			}
+			s.cells[y][x].Shapes = s.cells[y][x].Shapes[:0]
 		}
-
-		obj.TouchingCells = []*Cell{}
-
 	}
 
 }
 
-// Objects returns a new slice of the objects in the Space.
-func (s *Space) Objects() []*Object {
-	return append(make([]*Object, 0, len(s.objects)), s.objects...)
+// Shapes returns a new slice consisting of all of the shapes present in the Space.
+func (s *Space) Shapes() []IShape {
+	return append(make([]IShape, 0, len(s.shapes)), s.shapes...)
 }
 
-// ForEachObject iterates through each Object in the Space and runs the provided function on them, passing the object, its index in the
-// objects slice, and the maximum number of objects in the space.
-func (s *Space) ForEachObject(forEach func(object *Object, index, maxCount int)) {
+// ForEachShape iterates through each Object in the Space and runs the provided function on them, passing the Shape, its index in the
+// Space's shapes slice, and the maximum number of shapes in the space.
+// If the function returns false, the iteration ends. If it returns true, it continues.
+func (s *Space) ForEachShape(forEach func(object IShape, index, maxCount int) bool) {
 
-	for i, o := range s.objects {
-		forEach(o, i, len(s.objects))
+	for i, o := range s.shapes {
+		if !forEach(o, i, len(s.shapes)) {
+			break
+		}
 	}
 
+}
+
+// FilterShapes returns a ShapeFilter consisting of all shapes present in the Space.
+func (s *Space) FilterShapes() ShapeFilter {
+	return ShapeFilter{
+		operatingOn: s.shapes,
+	}
 }
 
 // Resize resizes the internal Cells array.
-func (sp *Space) Resize(width, height int) {
+func (s *Space) Resize(width, height int) {
 
-	sp.Cells = [][]*Cell{}
+	s.cells = [][]*Cell{}
 
 	for y := 0; y < height; y++ {
 
-		sp.Cells = append(sp.Cells, []*Cell{})
+		s.cells = append(s.cells, []*Cell{})
 
 		for x := 0; x < width; x++ {
-			sp.Cells[y] = append(sp.Cells[y], newCell(x, y))
+			s.cells[y] = append(s.cells[y], newCell(x, y))
 		}
 
+	}
+
+	for _, s := range s.shapes {
+		s.update()
 	}
 
 }
 
 // Cell returns the Cell at the given cellular / spatial (not world) X and Y position in the Space. If the X and Y position are
-// out of bounds, Cell() will return nil.
-func (sp *Space) Cell(x, y int) *Cell {
+// out of bounds, Cell() will return nil. This does not flush shape vicinities beforehand.
+func (s *Space) Cell(cx, cy int) *Cell {
 
-	if y >= 0 && y < len(sp.Cells) && x >= 0 && x < len(sp.Cells[y]) {
-		return sp.Cells[y][x]
+	if cy >= 0 && cy < len(s.cells) && cx >= 0 && cx < len(s.cells[cy]) {
+		return s.cells[cy][cx]
 	}
 	return nil
 
 }
 
-// CheckCells checks a set of cells (from x,y to x + w, y + h in cellular coordinates) and returns
-// a slice of the objects found within those Cells.
-// The objects must have any of the tags provided (if any are provided).
-func (sp *Space) CheckCells(x, y, w, h int, tags ...string) []*Object {
-
-	res := []*Object{}
-
-	for ix := x; ix < x+w; ix++ {
-
-		for iy := y; iy < y+h; iy++ {
-
-			cell := sp.Cell(ix, iy)
-
-			if cell != nil {
-
-				if len(tags) > 0 {
-
-					if cell.ContainsTags(tags...) {
-						for _, obj := range cell.Objects {
-							if obj.HasTags(tags...) {
-								res = append(res, obj)
-							}
-						}
-					}
-
-				} else if cell.Occupied() {
-					res = append(res, cell.Objects...)
-				}
-
-			}
-
-		}
-
-	}
-
-	return res
-
-}
-
-// CheckWorld checks the cells of the Grid with the given world coordinates.
-// Internally, this is just syntactic sugar for calling Space.WorldToSpace() on the
-// position and size given.
-func (sp *Space) CheckWorld(x, y, w, h float64, tags ...string) []*Object {
-
-	sx, sy := sp.WorldToSpace(x, y)
-	cw, ch := sp.WorldToSpace(w, h)
-
-	return sp.CheckCells(sx, sy, cw, ch, tags...)
-
-}
-
-// CheckWorldVec checks the cells of the Grid with the given world coordinates.
-// This function takes vectors for the position and size of the checked area.
-// Internally, this is just syntactic sugar for calling Space.WorldToSpace() on the
-// position and size given.
-func (sp *Space) CheckWorldVec(pos, size Vector, tags ...string) []*Object {
-
-	sx, sy := sp.WorldToSpace(pos.X, pos.Y)
-	cw, ch := sp.WorldToSpace(size.X, size.Y)
-
-	return sp.CheckCells(sx, sy, cw, ch, tags...)
-
-}
-
-// UnregisterAllObjects unregisters all Objects registered to Cells in the Space.
-func (sp *Space) UnregisterAllObjects() {
-
-	for y := 0; y < len(sp.Cells); y++ {
-
-		for x := 0; x < len(sp.Cells[y]); x++ {
-			cell := sp.Cells[y][x]
-			sp.Remove(cell.Objects...)
-		}
-
-	}
-
-}
-
-// WorldToSpace converts from a world position (x, y) to a position in the Space (a grid-based position).
-func (sp *Space) WorldToSpace(x, y float64) (int, int) {
-	fx := int(math.Floor(x / float64(sp.CellWidth)))
-	fy := int(math.Floor(y / float64(sp.CellHeight)))
-	return fx, fy
-}
-
-// WorldToSpaceVec converts from a world position Vector to a position in the Space (a grid-based position).
-func (sp *Space) WorldToSpaceVec(position Vector) (int, int) {
-	return sp.WorldToSpace(position.X, position.Y)
-}
-
-// SpaceToWorld converts from a position in the Space (on a grid) to a world-based position, given the size of the Space when first created.
-func (sp *Space) SpaceToWorld(x, y int) (float64, float64) {
-	fx := float64(x * sp.CellWidth)
-	fy := float64(y * sp.CellHeight)
-	return fx, fy
-}
-
-func (sp *Space) SpaceToWorldVec(x, y int) Vector {
-	outX, outY := sp.SpaceToWorld(x, y)
-	return Vector{outX, outY}
-}
-
 // Height returns the height of the Space grid in Cells (so a 320x240 Space with 16x16 cells would have a height of 15).
-func (sp *Space) Height() int {
-	return len(sp.Cells)
+func (s *Space) Height() int {
+	return len(s.cells)
 }
 
 // Width returns the width of the Space grid in Cells (so a 320x240 Space with 16x16 cells would have a width of 20).
-func (sp *Space) Width() int {
-	if len(sp.Cells) > 0 {
-		return len(sp.Cells[0])
+func (s *Space) Width() int {
+	if len(s.cells) > 0 {
+		return len(s.cells[0])
 	}
 	return 0
 }
 
-func (sp *Space) CellsInLine(startX, startY, endX, endY int) []*Cell {
+// CellWidth returns the width of each cell in the Space.
+func (s *Space) CellWidth() int {
+	return s.cellWidth
+}
 
-	cells := []*Cell{}
-	cell := sp.Cell(startX, startY)
-	endCell := sp.Cell(endX, endY)
+// CellHeight returns the height of each cell in the Space.
+func (s *Space) CellHeight() int {
+	return s.cellHeight
+}
 
-	if cell != nil && endCell != nil {
+// FilterCells selects a selection of cells.
+func (s *Space) FilterCells(bounds Bounds) CellSelection {
 
-		dv := Vector{float64(endX - startX), float64(endY - startY)}.Unit()
-		dv.X *= float64(sp.CellWidth / 2)
-		dv.Y *= float64(sp.CellHeight / 2)
+	bounds.space = s
 
-		pX, pY := sp.SpaceToWorld(startX, startY)
-		p := Vector{pX + float64(sp.CellWidth/2), pY + float64(sp.CellHeight/2)}
+	fx, fy, fx2, fy2 := bounds.toCellSpace()
 
-		alternate := false
-
-		for cell != nil {
-
-			if cell == endCell {
-				cells = append(cells, cell)
-				break
-			}
-
-			cells = append(cells, cell)
-
-			if alternate {
-				p.Y += dv.Y
-			} else {
-				p.X += dv.X
-			}
-
-			cx, cy := sp.WorldToSpace(p.X, p.Y)
-			c := sp.Cell(cx, cy)
-			if c != cell {
-				cell = c
-			}
-			alternate = !alternate
-
-		}
-
+	return CellSelection{
+		space:  s,
+		StartX: fx,
+		StartY: fy,
+		EndX:   fx2,
+		EndY:   fy2,
 	}
 
-	return cells
-
 }
+
+// func (s *Space) FilterCellsInLine(start, end Vector) CellSelection {
+
+// 	cells := CellSelection{}
+
+// 	startX := int(math.Floor(start.X / float64(s.CellWidth)))
+// 	startY := int(math.Floor(start.Y / float64(s.CellHeight)))
+
+// 	endX := int(math.Floor(end.X / float64(s.CellWidth)))
+// 	endY := int(math.Floor(end.Y / float64(s.CellHeight)))
+
+// 	cell := s.Cell(startX, startY)
+// 	endCell := s.Cell(endX, endY)
+
+// 	if cell != nil && endCell != nil {
+
+// 		dv := Vector{float64(endX - startX), float64(endY - startY)}.Unit()
+// 		dv.X *= float64(s.CellWidth / 2)
+// 		dv.Y *= float64(s.CellHeight / 2)
+
+// 		pX := float64(startX * s.CellWidth)
+// 		pY := float64(startY * s.CellHeight)
+
+// 		p := Vector{pX + float64(s.CellWidth/2), pY + float64(s.CellHeight/2)}
+
+// 		alternate := false
+
+// 		for cell != nil {
+
+// 			if cell == endCell {
+// 				cells = append(cells, cell)
+// 				break
+// 			}
+
+// 			cells = append(cells, cell)
+
+// 			if alternate {
+// 				p.Y += dv.Y
+// 			} else {
+// 				p.X += dv.X
+// 			}
+
+// 			cx := int(math.Floor(p.X / float64(s.CellWidth)))
+// 			cy := int(math.Floor(p.Y / float64(s.CellHeight)))
+
+// 			c := s.Cell(cx, cy)
+// 			if c != cell {
+// 				cell = c
+// 			}
+// 			alternate = !alternate
+
+// 		}
+
+// 	}
+
+// 	return cells
+
+// }

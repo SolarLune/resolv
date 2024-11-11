@@ -39,6 +39,7 @@ func NewVectorZero() Vector {
 }
 
 // Modify returns a ModVector object (a pointer to the original vector).
+// Using a ModVector allows you to chain functions without having to reassign it to the original Vector object all of the time.
 func (vec *Vector) Modify() ModVector {
 	ip := ModVector{Vector: vec}
 	return ip
@@ -49,10 +50,22 @@ func (vec Vector) String() string {
 	return fmt.Sprintf("{%.2f, %.2f}", vec.X, vec.Y)
 }
 
-// Plus returns a copy of the calling vector, added together with the other Vector provided (ignoring the W component).
+// Add returns a copy of the calling vector, added together with the other Vector provided (ignoring the W component).
 func (vec Vector) Add(other Vector) Vector {
 	vec.X += other.X
 	vec.Y += other.Y
+	return vec
+}
+
+// AddX returns a copy of the calling vector with an added value to the X axis.
+func (vec Vector) AddX(x float64) Vector {
+	vec.X += x
+	return vec
+}
+
+// AddY returns a copy of the calling vector with an added value to the Y axis.
+func (vec Vector) AddY(y float64) Vector {
+	vec.Y += y
 	return vec
 }
 
@@ -60,6 +73,18 @@ func (vec Vector) Add(other Vector) Vector {
 func (vec Vector) Sub(other Vector) Vector {
 	vec.X -= other.X
 	vec.Y -= other.Y
+	return vec
+}
+
+// SubX returns a copy of the calling vector with an added value to the X axis.
+func (vec Vector) SubX(x float64) Vector {
+	vec.X -= x
+	return vec
+}
+
+// SubY returns a copy of the calling vector with an added value to the Y axis.
+func (vec Vector) SubY(y float64) Vector {
+	vec.Y -= y
 	return vec
 }
 
@@ -101,6 +126,11 @@ func (vec Vector) ClampMagnitude(maxMag float64) Vector {
 	return vec
 }
 
+// AddMagnitude adds magnitude to the Vector in the direction it's already pointing.
+func (vec Vector) AddMagnitude(mag float64) Vector {
+	return vec.Add(vec.Unit().Scale(mag))
+}
+
 // SubMagnitude subtracts the given magnitude from the Vector's existing magnitude.
 // If the vector's magnitude is less than the given magnitude to subtract, a zero-length Vector will be returned.
 func (vec Vector) SubMagnitude(mag float64) Vector {
@@ -113,12 +143,16 @@ func (vec Vector) SubMagnitude(mag float64) Vector {
 
 // Distance returns the distance from the calling Vector to the other Vector provided.
 func (vec Vector) Distance(other Vector) float64 {
-	return vec.Sub(other).Magnitude()
+	vec.X -= other.X
+	vec.Y -= other.Y
+	return math.Sqrt(vec.X*vec.X + vec.Y*vec.Y)
 }
 
 // Distance returns the squared distance from the calling Vector to the other Vector provided. This is faster than Distance(), as it avoids using math.Sqrt().
 func (vec Vector) DistanceSquared(other Vector) float64 {
-	return vec.Sub(other).MagnitudeSquared()
+	vec.X -= other.X
+	vec.Y -= other.Y
+	return vec.X*vec.X + vec.Y*vec.Y
 }
 
 // Mult performs Hadamard (component-wise) multiplication on the calling Vector with the other Vector provided, returning a copy with the result (and ignoring the Vector's W component).
@@ -157,6 +191,17 @@ func (vec Vector) Set(x, y float64) Vector {
 	vec.X = x
 	vec.Y = y
 	return vec
+}
+
+// Reflect reflects the vector against the given surface normal.
+func (vec Vector) Reflect(normal Vector) Vector {
+	n := normal.Unit()
+	return vec.Sub(n.Scale(2 * n.Dot(vec)))
+}
+
+// Perp returns the right-handed perpendicular of the vector (i.e. the vector rotated 90 degrees to the right, clockwise).
+func (vec Vector) Perp() Vector {
+	return Vector{-vec.Y, vec.X}
 }
 
 // Floats returns a [2]float64 array consisting of the Vector's contents.
@@ -292,6 +337,32 @@ func (vec Vector) Slerp(targetDirection Vector, percentage float64) Vector {
 
 }
 
+// IsInside returns if the given Vector is inside of the given Shape.
+func (vec Vector) IsInside(shape IShape) bool {
+	switch other := shape.(type) {
+	case *ConvexPolygon:
+
+		// Internally, we test for this by just making a line that extends into infinity and then checking for intersection points.
+		pointLine := newCollidingLine(vec.X, vec.Y, vec.X+999999999999, vec.Y)
+
+		contactCount := 0
+
+		for _, line := range other.Lines() {
+
+			if _, ok := line.IntersectionPointsLine(pointLine); ok {
+				contactCount++
+			}
+
+		}
+
+		return contactCount%2 == 1
+
+	case *Circle:
+		return vec.DistanceSquared(other.position) <= other.radius*other.radius
+	}
+	return false
+}
+
 // ModVector represents a reference to a Vector, made to facilitate easy method-chaining and modifications on that Vector (as you
 // don't need to re-assign the results of a chain of operations to the original variable to "save" the results).
 // Note that a ModVector is not meant to be used to chain methods on a vector to pass directly into a function; you can just
@@ -314,6 +385,48 @@ func (ip ModVector) Add(other Vector) ModVector {
 func (ip ModVector) Sub(other Vector) ModVector {
 	ip.X -= other.X
 	ip.Y -= other.Y
+	return ip
+}
+
+// AddX adds a value to the X axis of the given Vector.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) AddX(x float64) ModVector {
+	ip.X += x
+	return ip
+}
+
+// SetX sets a value to the X axis of the given Vector.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) SetX(x float64) ModVector {
+	ip.X = x
+	return ip
+}
+
+// SubX subtracts a value from the X axis of the given Vector.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) SubX(x float64) ModVector {
+	ip.X -= x
+	return ip
+}
+
+// AddY adds a value to the Y axis of the given Vector.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) AddY(y float64) ModVector {
+	ip.X += y
+	return ip
+}
+
+// SetY sets a value to the Y axis of the given Vector.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) SetY(y float64) ModVector {
+	ip.X = y
+	return ip
+}
+
+// SubY subtracts a value from the Y axis of the given Vector.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) SubY(y float64) ModVector {
+	ip.X -= y
 	return ip
 }
 
@@ -419,6 +532,13 @@ func (ip ModVector) SubMagnitude(mag float64) ModVector {
 
 }
 
+// AddMagnitude adds magnitude to the Vector in the direction it's already pointing.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) AddMagnitude(mag float64) ModVector {
+	ip.Add(ip.Vector.Unit().Scale(mag))
+	return ip
+}
+
 // Lerp performs a linear interpolation between the starting Vector and the provided
 // other Vector, to the given percentage (ranging from 0 to 1).
 // This function returns the calling ModVector for method chaining.
@@ -462,4 +582,32 @@ func (ip ModVector) Clone() ModVector {
 
 func (ip ModVector) ToVector() Vector {
 	return *ip.Vector
+}
+
+// Reflect reflects the vector against the given surface normal.
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) Reflect(normal Vector) ModVector {
+	reflected := (*ip.Vector).Reflect(normal)
+	ip.X = reflected.X
+	ip.Y = reflected.Y
+	return ip
+}
+
+// Perp returns the right-handed perpendicular of the input vector (i.e. the Vector rotated 90 degrees to the right, clockwise).
+// This function returns the calling ModVector for method chaining.
+func (ip ModVector) Perp() ModVector {
+	crossed := (*ip.Vector).Perp()
+	ip.X = crossed.X
+	ip.Y = crossed.Y
+	return ip
+}
+
+// Distance returns the distance from the calling ModVector to the other Vector provided.
+func (ip ModVector) Distance(other Vector) float64 {
+	return ip.Vector.Distance(other)
+}
+
+// DistanceSquared returns the distance from the calling ModVector to the other Vector provided.
+func (ip ModVector) DistanceSquared(other Vector) float64 {
+	return ip.Vector.DistanceSquared(other)
 }
