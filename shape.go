@@ -429,7 +429,7 @@ func circleCircleTest(circleA, circleB *Circle) IntersectionSet {
 	dist := intersectionSet.MTV.Magnitude()
 	intersectionSet.MTV = intersectionSet.MTV.Unit().Scale(circleA.radius + circleB.radius - dist)
 
-	intersectionSet.OtherShape = circleA
+	intersectionSet.OtherShape = circleB
 
 	return intersectionSet
 
