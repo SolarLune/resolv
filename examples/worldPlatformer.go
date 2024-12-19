@@ -36,18 +36,18 @@ func (w *WorldPlatformer) Init() {
 	solids := resolv.ShapeCollection{
 		resolv.NewCircle(128, 128, 32),
 
-		resolv.NewRectangleTopLeft(0, 0, 640, 8),
-		resolv.NewRectangleTopLeft(640-8, 8, 8, 360-16),
+		resolv.NewRectangleFromTopLeft(0, 0, 640, 8),
+		resolv.NewRectangleFromTopLeft(640-8, 8, 8, 360-16),
 
-		resolv.NewRectangleTopLeft(0, 8, 8, 360-32),
-		resolv.NewRectangleTopLeft(0, 360-8-16, 8, 8),
-		resolv.NewRectangleTopLeft(0, 360-8-8, 8, 8),
+		resolv.NewRectangleFromTopLeft(0, 8, 8, 360-32),
+		resolv.NewRectangleFromTopLeft(0, 360-8-16, 8, 8),
+		resolv.NewRectangleFromTopLeft(0, 360-8-8, 8, 8),
 
-		resolv.NewRectangleTopLeft(64, 200, 300, 8),
-		resolv.NewRectangleTopLeft(64, 280, 300, 8),
-		resolv.NewRectangleTopLeft(512, 96, 32, 200),
+		resolv.NewRectangleFromTopLeft(64, 200, 300, 8),
+		resolv.NewRectangleFromTopLeft(64, 280, 300, 8),
+		resolv.NewRectangleFromTopLeft(512, 96, 32, 200),
 
-		resolv.NewRectangleTopLeft(0, 360-8, 640, 8),
+		resolv.NewRectangleFromTopLeft(0, 360-8, 640, 8),
 	}
 
 	solids.SetTags(TagSolidWall | TagPlatform)
@@ -57,10 +57,10 @@ func (w *WorldPlatformer) Init() {
 	/////
 
 	platforms := resolv.ShapeCollection{
-		resolv.NewRectangleTopLeft(400, 200, 32, 16),
-		resolv.NewRectangleTopLeft(400, 240, 32, 16),
-		resolv.NewRectangleTopLeft(400, 280, 32, 16),
-		resolv.NewRectangleTopLeft(400, 320, 32, 16),
+		resolv.NewRectangleFromTopLeft(400, 200, 32, 16),
+		resolv.NewRectangleFromTopLeft(400, 240, 32, 16),
+		resolv.NewRectangleFromTopLeft(400, 280, 32, 16),
+		resolv.NewRectangleFromTopLeft(400, 320, 32, 16),
 	}
 
 	platforms.SetTags(TagPlatform)
@@ -87,7 +87,7 @@ func (w *WorldPlatformer) Init() {
 	r.SetPositionVec(resolv.NewVector(240, 344))
 	w.space.Add(r)
 
-	w.MovingPlatform = resolv.NewRectangleTopLeft(550, 200, 32, 8)
+	w.MovingPlatform = resolv.NewRectangleFromTopLeft(550, 200, 32, 8)
 	w.MovingPlatform.Tags().Set(TagPlatform)
 	w.space.Add(w.MovingPlatform)
 

@@ -45,12 +45,12 @@ func (w *WorldBouncer) Init() {
 
 	// Create a selection of shapes that comprise the walls.
 	w.Solids = resolv.ShapeCollection{
-		resolv.NewRectangleTopLeft(0, 0, 640, 16),
-		resolv.NewRectangleTopLeft(0, 360-16, 640, 16),
-		resolv.NewRectangleTopLeft(0, 16, 16, 360-16),
-		resolv.NewRectangleTopLeft(640-16, 16, 16, 360-16),
-		resolv.NewRectangleTopLeft(64, 128, 16, 200),
-		resolv.NewRectangleTopLeft(120, 300, 200, 8),
+		resolv.NewRectangleFromTopLeft(0, 0, 640, 16),
+		resolv.NewRectangleFromTopLeft(0, 360-16, 640, 16),
+		resolv.NewRectangleFromTopLeft(0, 16, 16, 360-16),
+		resolv.NewRectangleFromTopLeft(640-16, 16, 16, 360-16),
+		resolv.NewRectangleFromTopLeft(64, 128, 16, 200),
+		resolv.NewRectangleFromTopLeft(120, 300, 200, 8),
 	}
 
 	// Set their tags (not strictly necessary here because the bouncers bounce off of everything and anything)..

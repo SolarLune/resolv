@@ -79,12 +79,12 @@ func (s *ShapeBase) ID() uint32 {
 	return s.id
 }
 
-// Data returns any auxiliary data set on the Circle shape.
+// Data returns any auxiliary data set on the shape.
 func (s *ShapeBase) Data() any {
 	return s.data
 }
 
-// SetData sets any auxiliary data on the Circle shape.
+// SetData sets any auxiliary data on the shape.
 func (s *ShapeBase) SetData(data any) {
 	s.data = data
 }
@@ -94,7 +94,7 @@ func (s *ShapeBase) Tags() *Tags {
 	return s.tags
 }
 
-// Move translates the Circle by the designated X and Y values.
+// Move translates the Shape by the designated X and Y values.
 func (s *ShapeBase) Move(x, y float64) {
 	s.position.X += x
 	s.position.Y += y

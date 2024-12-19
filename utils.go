@@ -112,6 +112,22 @@ func (b Bounds) Height() float64 {
 	return b.Max.Y - b.Min.Y
 }
 
+// MaxAxis returns the maximum value out of either the Bounds's width or height.
+func (b Bounds) MaxAxis() float64 {
+	if b.Width() > b.Height() {
+		return b.Width()
+	}
+	return b.Height()
+}
+
+// MinAxis returns the minimum value out of either the Bounds's width or height.
+func (b Bounds) MinAxis() float64 {
+	if b.Width() > b.Height() {
+		return b.Height()
+	}
+	return b.Width()
+}
+
 // Move moves the Bounds, such that the center point is offset by {x, y}.
 func (b Bounds) Move(x, y float64) Bounds {
 	b.Min.X += x
@@ -141,11 +157,11 @@ func (b Bounds) Intersection(other Bounds) Bounds {
 		return overlap
 	}
 
-	overlap.Min.X = math.Min(other.Max.X, b.Max.X)
-	overlap.Max.X = math.Max(other.Min.X, b.Min.X)
+	overlap.Max.X = math.Min(other.Max.X, b.Max.X)
+	overlap.Min.X = math.Max(other.Min.X, b.Min.X)
 
-	overlap.Min.Y = math.Min(other.Max.Y, b.Max.Y)
-	overlap.Max.Y = math.Max(other.Min.Y, b.Min.Y)
+	overlap.Max.Y = math.Min(other.Max.Y, b.Max.Y)
+	overlap.Min.Y = math.Max(other.Min.Y, b.Min.Y)
 
 	return overlap
 
@@ -341,9 +357,11 @@ func LineTest(settings LineTestSettings) bool {
 	})
 
 	// Loop through all intersections and iterate through them
-	for i, c := range intersectionSets {
-		if !settings.OnIntersect(c, i, len(intersectionSets)) {
-			break
+	if settings.OnIntersect != nil {
+		for i, c := range intersectionSets {
+			if !settings.OnIntersect(c, i, len(intersectionSets)) {
+				break
+			}
 		}
 	}
 

@@ -85,14 +85,14 @@ func (s *Space) RemoveAll() {
 }
 
 // Shapes returns a new slice consisting of all of the shapes present in the Space.
-func (s *Space) Shapes() []IShape {
-	return append(make([]IShape, 0, len(s.shapes)), s.shapes...)
+func (s *Space) Shapes() ShapeCollection {
+	return append(make(ShapeCollection, 0, len(s.shapes)), s.shapes...)
 }
 
-// ForEachShape iterates through each Object in the Space and runs the provided function on them, passing the Shape, its index in the
+// ForEachShape iterates through each shape in the Space and runs the provided function on them, passing the Shape, its index in the
 // Space's shapes slice, and the maximum number of shapes in the space.
 // If the function returns false, the iteration ends. If it returns true, it continues.
-func (s *Space) ForEachShape(forEach func(object IShape, index, maxCount int) bool) {
+func (s *Space) ForEachShape(forEach func(shape IShape, index, maxCount int) bool) {
 
 	for i, o := range s.shapes {
 		if !forEach(o, i, len(s.shapes)) {
@@ -141,13 +141,26 @@ func (s *Space) Cell(cx, cy int) *Cell {
 
 }
 
-// Height returns the height of the Space grid in Cells (so a 320x240 Space with 16x16 cells would have a height of 15).
+// Width returns the spacial width of the Space grid in world coordinates.
+func (s *Space) Width() int {
+	if len(s.cells) > 0 {
+		return len(s.cells[0]) * s.cellWidth
+	}
+	return 0
+}
+
+// Height returns the spacial height of the Space grid in world coordinates.
 func (s *Space) Height() int {
+	return len(s.cells) * s.cellHeight
+}
+
+// HeightInCells returns the height of the Space grid in Cells (so a 320x240 Space with 16x16 cells would have a HeightInCells() of 15).
+func (s *Space) HeightInCells() int {
 	return len(s.cells)
 }
 
-// Width returns the width of the Space grid in Cells (so a 320x240 Space with 16x16 cells would have a width of 20).
-func (s *Space) Width() int {
+// WidthInCells returns the width of the Space grid in Cells (so a 320x240 Space with 16x16 cells would have a WidthInCells() of 20).
+func (s *Space) WidthInCells() int {
 	if len(s.cells) > 0 {
 		return len(s.cells[0])
 	}

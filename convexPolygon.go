@@ -631,11 +631,11 @@ func NewRectangle(x, y, w, h float64) *ConvexPolygon {
 	)
 }
 
-// NewRectangleTopLeft returns a rectangular ConvexPolygon at the position given with the vertices ordered in clockwise order.
+// NewRectangleFromTopLeft returns a rectangular ConvexPolygon at the position given with the vertices ordered in clockwise order.
 // The Rectangle's origin will be the center of its shape (as is recommended for collision testing).
 // Note that the rectangle will be positioned such that x, y is the top-left corner, though the center-point is still
 // in the center of the ConvexPolygon shape.
-func NewRectangleTopLeft(x, y, w, h float64) *ConvexPolygon {
+func NewRectangleFromTopLeft(x, y, w, h float64) *ConvexPolygon {
 
 	r := NewRectangle(x, y, w, h)
 	r.Move(w/2, h/2)

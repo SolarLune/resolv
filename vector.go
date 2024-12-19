@@ -251,13 +251,20 @@ func (vec Vector) Rotate(angle float64) Vector {
 	return vec
 }
 
-// Angle returns the angle between the calling Vector and the provided other Vector (ignoring the W component).
+// Angle returns the signed angle in radians between the calling Vector and the provided other Vector (ignoring the W component).
 func (vec Vector) Angle(other Vector) float64 {
-	d := vec.Unit().Dot(other.Unit())
-	d = clamp(d, -1, 1) // Acos returns NaN if value < -1 or > 1
-	return math.Acos(float64(d))
+	// vec = vec.Unit()
+	// other = other.Unit()
+	angle := math.Atan2(other.Y, other.X) - math.Atan2(vec.Y, vec.X)
+	if angle > math.Pi {
+		angle -= 2 * math.Pi
+	} else if angle <= -math.Pi {
+		angle += 2 * math.Pi
+	}
+	return angle
 }
 
+// AngleRotation returns the angle in radians between this Vector and world right
 func (vec Vector) AngleRotation() float64 {
 	return vec.Angle(WorldRight)
 }
